@@ -1,3 +1,18 @@
 [submodule "Proteus/Arduino-Library-for-Proteus"]
 	path = Proteus/Arduino-Library-for-Proteus
 	url = https://github.com/cyberponk/Arduino-Library-for-Proteus
+[submodule "Sketch/LCD_HWMONITOR/src/DHT11-Library"]
+	path = Sketch/LCD_HWMONITOR/src/DHT11-Library
+	url = https://github.com/mlinares1998/DHT11-Library
+[submodule "Sketch/LCD_HWMONITOR/src/NewLiquidCrystal"]
+	path = Sketch/LCD_HWMONITOR/src/NewLiquidCrystal
+	url = https://github.com/mlinares1998/NewLiquidCrystal
+[submodule "Sketch/LCD_HWMONITOR/src/arduino-new-tone"]
+	path = Sketch/LCD_HWMONITOR/src/arduino-new-tone
+	url = https://bitbucket.org/teckel12/arduino-new-tone/
+[submodule "Sketch/LCD_HWMONITOR/src/Arduino-IRremote"]
+	path = Sketch/LCD_HWMONITOR/src/Arduino-IRremote
+	url = https://github.com/z3t0/Arduino-IRremote
+[submodule "Sketch/LCD_HWMONITOR/src/Bounce2"]
+	path = Sketch/LCD_HWMONITOR/src/Bounce2
+	url = https://github.com/thomasfredericks/Bounce2

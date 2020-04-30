@@ -6,12 +6,17 @@ CREDITS
 */
 //************************************ Init *****************************************//
 //Libs
-#include <LiquidCrystal.h>
-#include <dht.h>
-#include <IRremote.h>
 #include <EEPROM.h>
-#include <NewTone.h>
-#include <Bounce2.h>
+//NewLiquidCrystal from Francisco Malpartida https://bitbucket.org/fmalpartida/
+#include "src\NewLiquidCrystal\LiquidCrystal.h"
+//Forked DHT11 Library by Rob Tillaart https://github.com/RobTillaart/ 
+#include "src\DHT11-Library\dht.h"
+//IRremote Library by Rafi Khan https://github.com/z3t0
+#include "src\Arduino-IRremote\src\IRremote.h"
+//NewTone Library by Tim Eckel https://bitbucket.org/teckel12/
+#include "src\arduino-new-tone\NewTone.h"
+//Bounce2 Library by Thomas O Fredericks https://github.com/thomasfredericks
+#include "src\Bounce2\src\Bounce2.h"
 
 //Define Pins
 const int PROGMEM IR_DIODE = 2;
