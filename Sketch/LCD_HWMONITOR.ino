@@ -6,22 +6,26 @@
 #include <EEPROM.h>
 
 //Pins
-int IR_DIODE = 2;
-int D7 = 3;
-int D6 = 4;
-int D5 = 5;
-int LCD_BL = 6;
-int D4 = 7;
-int TEMP_HUMIDITY = 10;
-int LCD_E = 8;
-int LCD_RS = 9;
-int LED_DATAPIN = 11;
-int LED_LATCHPIN = 12;
-int LED_CLOCKPIN = 13;
-int FWU_PIN = A0;
+const int PROGMEM IR_DIODE = 2;
+const int PROGMEM D7 = 3;
+const int PROGMEM D6 = 4;
+const int PROGMEM D5 = 5;
+const int PROGMEM LCD_BL = 6;
+const int PROGMEM D4 = 7;
+const int PROGMEM TEMP_HUMIDITY = 8;
+const int PROGMEM LCD_RW = 9;
+const int PROGMEM LCD_RS = 10;
+const int PROGMEM LED_DATAPIN = 11;
+const int PROGMEM LED_LATCHPIN = 12;
+const int PROGMEM LED_CLOCKPIN = 13;
+const int PROGMEM FWU_PIN = A0;
+const int PROGMEM PWR_PHYS = A1;
+const int PROGMEM CFG_PHYS = A2;
+const int PROGMEM OK_PHYS = A3;
+const int PROGMEM FORWARD_PHYS = A4;
 
 //LCD Screen Init
-LiquidCrystal lcd(LCD_RS,LCD_E,D4,D5,D6,D7); //4-bit Mode
+LiquidCrystal lcd(LCD_RS,LCD_RW,D4,D5,D6,D7); //4-bit Mode
 
 //DHT11 Init
 dht DHT;
@@ -83,7 +87,7 @@ int MODE;
 int scroll_counter = 1;
 int scroll_delay = 0;
 //Serial Monitoring
-const byte numChars = 255;
+const static byte PROGMEM numChars = 255;
 char receivedChars[numChars];
 boolean newData = false;
 unsigned long timeoutcounter = 0;
@@ -93,28 +97,43 @@ char line1[16];
 
 //DHT11 Reading Delay
 int DHT_Counter;
+
+//Button Variables
+bool PWR_PUSH = LOW;
+bool CFG_PUSH = LOW;
+bool OK_PUSH = LOW;
+bool FORWARDS_PUSH = LOW;
+bool PWR_PUSH_OLD = LOW;
+bool CFG_PUSH_OLD = LOW;
+bool OK_PUSH_OLD = LOW;
+bool FORWARDS_PUSH_OLD = LOW;
+bool TEST_BUTTON = false;
+bool OK_BUTTON = false;
+bool FORWARDS_BUTTON = false;
+int selected_item = 1;
+
 //Version
-char version[4] = "1.3";
+const char version[4] = "1.4";
 
 //Logo Chars Normal Mode
-byte line0_0[] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
-byte line0_1[] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
-byte line0_1_ALT [] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
-byte line0_2[] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
-byte line0_3[] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
-byte line1_0[] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
-byte line1_1[] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
-byte line1_2[] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
-byte line1_3[] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
+const byte line0_0[] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
+const byte line0_1[] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
+const byte line0_1_ALT [] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
+const byte line0_2[] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
+const byte line0_3[] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
+const byte line1_0[] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
+const byte line1_1[] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
+const byte line1_2[] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
+const byte line1_3[] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
 
 //Logo Chars FWU
-byte line0_0_FWU[] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
-byte line0_1_FWU[] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
-byte line0_2_FWU[] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
-byte line0_3_FWU[] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
-byte line0_4_FWU[] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
-byte line1_0_FWU[] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
-byte line1_1_FWU[] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+const byte line0_0_FWU[] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
+const byte line0_1_FWU[] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
+const byte line0_2_FWU[] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
+const byte line0_3_FWU[] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
+const byte line0_4_FWU[] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
+const byte line1_0_FWU[] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
+const byte line1_1_FWU[] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
 //Setup
 void setup()
 {
@@ -126,23 +145,27 @@ pinMode(D4,OUTPUT);
 pinMode(LCD_BL,OUTPUT);
 pinMode(TEMP_HUMIDITY,INPUT);
 pinMode(IR_DIODE,INPUT);
-pinMode(LCD_E,OUTPUT);
+pinMode(LCD_RW,OUTPUT);
 pinMode(LCD_RS,OUTPUT);
 pinMode(LED_DATAPIN,OUTPUT);
 pinMode(LED_LATCHPIN,OUTPUT);
 pinMode(LED_CLOCKPIN,OUTPUT);
 pinMode(FWU_PIN, INPUT_PULLUP);
+pinMode(PWR_PHYS, INPUT_PULLUP);
+pinMode(CFG_PHYS, INPUT_PULLUP);
+pinMode(OK_PHYS, INPUT_PULLUP);
+pinMode(FORWARD_PHYS, INPUT_PULLUP);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 lcd.begin(16,2); //LCD Start
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
-lcd.createChar(0,(uint8_t *)line0_0);
-lcd.createChar(1,(uint8_t *)line0_1);
-lcd.createChar(2,(uint8_t *)line0_2);
-lcd.createChar(3,(uint8_t *)line0_3);
-lcd.createChar(4,(uint8_t *)line1_0);
-lcd.createChar(5,(uint8_t *)line1_1);
-lcd.createChar(6,(uint8_t *)line1_2);
-lcd.createChar(7,(uint8_t *)line1_3);
+lcd.createChar(0,line0_0);
+lcd.createChar(1,line0_1);
+lcd.createChar(2,line0_2);
+lcd.createChar(3,line0_3);
+lcd.createChar(4,line1_0);
+lcd.createChar(5,line1_1);
+lcd.createChar(6,line1_2);
+lcd.createChar(7,line1_3);
 }
 
 
@@ -159,10 +182,14 @@ void loop() {
 //Main Functions
 
 void standby() {
+    //Reset Buttons States
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
     //Serial OFF
     Serial.end();
     //Restore Original Chars (After Blink)
-    lcd.createChar(3,(uint8_t *)line0_3);
+    lcd.createChar(3,line0_3);
     IR_on_off = false;
     scroll_counter = 1;
     scroll_delay = 0;
@@ -176,7 +203,7 @@ void standby() {
     RAM_LED = 0x00;
     update_cpanel();
     //Wait until ON/OFF Button is pushed
-    while(!IR_on_off) {check_FWU();}
+    while(!IR_on_off) {check_BUTTONS();}
     return;   
 }
 
@@ -205,11 +232,11 @@ void welcome() {
     current_millis = millis();
     while(millis() - current_millis <= 1000) {check_on_off();}
     current_millis = millis();
-    lcd.createChar(1,(uint8_t *)line0_1_ALT);
+    lcd.createChar(1,line0_1_ALT);
     CPU_LED = 0x02;
     update_cpanel();
     while(millis() - current_millis <= 350) {check_on_off();}
-    lcd.createChar(1,(uint8_t *)line0_1);
+    lcd.createChar(1,line0_1);
     current_millis = millis();
     while(millis() - current_millis <= 650) {check_on_off();}
     GPU_LED = 0x02;
@@ -307,11 +334,13 @@ void config() {
     //Show Settings splash for 3 seconds
     lcd.clear();
     lcd.setCursor(4,0);
-    lcd.write("SETTINGS");
+    lcd.print(F("SETTINGS"));
     current_millis = millis();
     while(millis() - current_millis <= 2000) {check_on_off();}
-    config_nosplash();
+    if(IR_test) {config_nosplash();}
+    if(TEST_BUTTON) {selected_item = 1;config_nosplash_buttons(true);}
 }
+//*********************************IR MENUS******************************************************
 void config_nosplash() {
     //Clear IR buttons values
     IR_1 = false;
@@ -319,9 +348,9 @@ void config_nosplash() {
     IR_back = false;
     //Selection menu
     lcd.clear();
-    lcd.write("(1) MONITOR MODE");
+    lcd.print(F("(1) MONITOR MODE"));
     lcd.setCursor(0,1);
-    lcd.write("(2) BRIGHTNESS");
+    lcd.print(F("(2) BRIGHTNESS"));
     //Wait until one of each button is pushed.
     while(!IR_1 && !IR_2 && !IR_back) {check_on_off();}
     if(IR_1) {modes_select();}
@@ -339,15 +368,15 @@ void config_nosplash() {
 
 //Mode Selector
 void modes_select() {
-    lcd.clear();
-    lcd.write("(1)  (2)   (3)");
-    lcd.setCursor(0,1);
-    lcd.write("EASY ADV. MANUAL");
     //Clean IR buttons values, show options and wait until one of each is pushed.
     IR_1 = false;
     IR_2 = false;
     IR_3 = false;
     IR_back = false;
+    lcd.clear();
+    lcd.print(F("(1)  (2)   (3)"));
+    lcd.setCursor(0,1);
+    lcd.print(F("EASY AUTO MANUAL"));
     while(!IR_1 && !IR_2 && !IR_3 && !IR_back) {check_on_off();}
      //Save desired mode value to EEPROM, then return
     if(IR_1) {MODE = 1;}
@@ -361,15 +390,15 @@ void modes_select() {
 }
 
 //BL CPANEL
-void brightness_select(bool brightness) {
-    if (brightness){lcd.clear();}
+void brightness_select(bool clear) {
+    if(clear){lcd.clear();}
     //BL Level (1-10) Scale
     int current_bl = BL_BRIGHTNESS / 25;
     //Dynamic Interface Drawing
     lcd.setCursor(3,0);
-    lcd.print("BRIGHTNESS");
+    lcd.print(F("BRIGHTNESS"));
     lcd.setCursor(1,1);
-    lcd.print("-");
+    lcd.print(F("-"));
     lcd.setCursor(3,1);
     while(current_bl != 0) {
         lcd.print(char(255));
@@ -378,11 +407,11 @@ void brightness_select(bool brightness) {
     current_bl = BL_BRIGHTNESS / 25;
     lcd.setCursor(current_bl + 3,1);
     while(current_bl != 0) {
-        lcd.print(" ");
+        lcd.print(F(" "));
         current_bl--;
     }
     lcd.setCursor(14,1);
-    lcd.print("+");
+    lcd.print(F("+"));
     //Reset IR Values until and wait until a button is pushed
     IR_play = false;
     IR_forwards = false;
@@ -404,6 +433,135 @@ void brightness_select(bool brightness) {
     else if(IR_back) {analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); BL_BRIGHTNESS = OLD_BL_BRIGHTNESS; config_nosplash();}
     else {brightness_select(false);}
 }
+//******************************************************************************************************************
+
+//************************************BUTTONS MENU******************************************************************
+void config_nosplash_buttons(bool clear) {
+    if(clear = true) {lcd.clear();}
+    //Clear IR buttons values
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    //Selection menu
+    switch(selected_item) {
+        case 1:
+        lcd.setCursor(0,0);
+        lcd.print(F("(*) MONITOR MODE"));
+        lcd.setCursor(0,1);
+        lcd.print(F("( ) BRIGHTNESS"));
+        break;
+        case 2:
+        lcd.setCursor(0,0);
+        lcd.print(F("( ) MONITOR MODE"));
+        lcd.setCursor(0,1);
+        lcd.print(F("(*) BRIGHTNESS"));
+        break;
+    }
+    //Wait until one of each button is pushed.
+    while(!TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+    if(FORWARDS_BUTTON) {selected_item++;if(selected_item > 2) {selected_item = 1;} config_nosplash_buttons(false);}
+    else if(OK_BUTTON && selected_item == 1) {selected_item = 1; modes_select_buttons(true);}
+    else if(OK_BUTTON && selected_item == 2) {selected_item = 1; brightness_select_buttons(true);}
+    else if(TEST_BUTTON) {TEST_BUTTON = false; lcd.clear(); monitor();}
+    //Save values to EEPROM
+    EEPROM_UPDATE();
+    //Reset Variables
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    selected_item = 1;
+    return;
+}
+
+//Mode Selector
+void modes_select_buttons(bool clear) {
+    if(clear) {lcd.clear();}
+    //Clean IR buttons values, show options and wait until one of each is pushed.
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    switch(selected_item) {
+        case 1:
+            lcd.setCursor(0,0);
+            lcd.print(F("(*)  ( )   ( )"));
+            lcd.setCursor(0,1);
+            lcd.print(F("EASY AUTO MANUAL"));
+            break;
+        case 2:
+            lcd.setCursor(0,0);
+            lcd.print(F("( )  (*)   ( )"));
+            lcd.setCursor(0,1);
+            lcd.print(F("EASY AUTO MANUAL"));
+            break;
+        case 3:
+            lcd.setCursor(0,0);
+            lcd.print(F("( )  ( )   (*)"));
+            lcd.setCursor(0,1);
+            lcd.print(F("EASY AUTO MANUAL"));
+            break;
+    }
+    while(!TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+     //Save desired mode value to EEPROM, then return
+    if(FORWARDS_BUTTON) {selected_item++;if(selected_item > 3) {selected_item = 1;} modes_select_buttons(false);}
+    else if(OK_BUTTON && selected_item == 1) {MODE = 1;}
+    else if(OK_BUTTON && selected_item == 2) {MODE = 2;}
+    else if(OK_BUTTON && selected_item == 3) {MODE = 3;}
+    else if(TEST_BUTTON) {config_nosplash_buttons(true);}
+    //Reset Scroll counter
+    scroll_counter = 1;
+    scroll_delay = 0;
+    return;
+}
+
+//BL CPANEL
+void brightness_select_buttons(bool clear) {
+    if (clear){lcd.clear();}
+    //BL Level (1-10) Scale
+    int current_bl = BL_BRIGHTNESS / 25;
+    //Dynamic Interface Drawing
+    lcd.setCursor(3,0);
+    lcd.print(F("BRIGHTNESS"));
+    lcd.setCursor(1,1);
+    lcd.print(F("-"));
+    lcd.setCursor(3,1);
+    while(current_bl != 0) {
+        lcd.print(char(255));
+        current_bl--;
+    }
+    current_bl = BL_BRIGHTNESS / 25;
+    lcd.setCursor(current_bl + 3,1);
+    while(current_bl != 0) {
+        lcd.print(F(" "));
+        current_bl--;
+    }
+    lcd.setCursor(14,1);
+    lcd.print(F("+"));
+    //Reset IR Values until and wait until a button is pushed
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    while(!TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+    current_bl = BL_BRIGHTNESS / 25;
+    if(FORWARDS_BUTTON && current_bl < 10) {
+        BL_BRIGHTNESS += 25;
+        analogWrite(LCD_BL,BL_BRIGHTNESS);
+        brightness_select_buttons(false);
+    }
+    else if(FORWARDS_BUTTON && current_bl == 10) {
+        BL_BRIGHTNESS = 25;
+        analogWrite(LCD_BL,BL_BRIGHTNESS);
+        brightness_select_buttons(true);
+    }
+    else if(OK_BUTTON){OK_BUTTON = false; return;}
+    else if(TEST_BUTTON) {
+        analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); 
+        BL_BRIGHTNESS = OLD_BL_BRIGHTNESS;
+        selected_item = 1;
+        config_nosplash_buttons(true);
+    }
+    else {brightness_select_buttons(false);}
+}
+//*****************************************************************************************************************
 
 //------------------------------------------Subfunctions-----------------------------------------------------------
 //IR codes receiver
@@ -461,14 +619,14 @@ void check_IR() {
 
 void wait_to_refresh() {
     //Pause if IR Play is pushed (MODE 2)
-    if(MODE == 2 && !IR_play) {
+    if(MODE == 2 && (!IR_play || !OK_BUTTON)) {
         scroll_delay++;
         if(scroll_delay == 10) {scroll_counter++;scroll_delay = 0;lcd.clear();}
     }
     //Manual Control (MODE 3)
-    else if(MODE == 3 && (IR_backwards || IR_forwards)) {
+    else if(MODE == 3 && (IR_backwards || IR_forwards || FORWARDS_BUTTON)) {
         if (IR_backwards) {scroll_counter--;IR_backwards = false;lcd.clear();}
-        if (IR_forwards) {scroll_counter++;IR_forwards = false;lcd.clear();}
+        if (IR_forwards || FORWARDS_BUTTON) {scroll_counter++;IR_forwards = false; FORWARDS_BUTTON = false;lcd.clear();}
     }
     //Back to Start/End
     if(scroll_counter == 6) {scroll_counter = 1;lcd.clear();}
@@ -480,7 +638,7 @@ void wait_to_refresh() {
         //Get serial data
         get_serial();
         //If settings button is pushed, go to settings
-        if(IR_test) {config();}
+        if(IR_test || TEST_BUTTON) {config();}
     }
     //Get sensors data
     getsensors();
@@ -524,37 +682,38 @@ void getsensors() {
         else if(String(array_table[i]) == "GC") {GPU_CLK = String(array_table[i+1]).toInt();}
         else if(String(array_table[i]) == "FP") {GPU_FPS = String(array_table[i+1]).toInt();}
     }
-    /*
-    RAM_USED = String(array_table[1]).toInt();
-    RAM_FREE = String(array_table[3]).toInt();
-    CPU_CLK = String(array_table[5]).toInt();
-    CPU_USAGE = String(array_table[7]).toInt();
-    CPU_TEMP = String(array_table[9]).toInt();
-    CPU_VCORE = String(array_table[11]).toFloat();
-    GPU_VCORE = String(array_table[13]).toFloat();
-    GPU_TEMP = String(array_table[15]).toInt();
-    GPU_CLK = String(array_table[17]).toInt();
-    GPU_FPS = String(array_table[19]).toInt();
-    */
     return;
 }
 
 //Check if Power button is pressed, ON -> OFF, OFF -> ON
 void check_on_off() {
-    check_FWU();
-    if(IR_on_off == false) {loop();}
+    check_BUTTONS();
+    if(IR_on_off == false) {loop();}}
+
+void check_BUTTONS() {
+    //Down Flank Detection
+    if(digitalRead(FWU_PIN) == LOW) {lcd.clear();FWU_MODE();}
+    PWR_PUSH = digitalRead(PWR_PHYS);
+    CFG_PUSH = digitalRead(CFG_PHYS);
+    OK_PUSH = digitalRead(OK_PHYS);
+    FORWARDS_PUSH = digitalRead(FORWARD_PHYS);
+    if(PWR_PUSH == LOW && PWR_PUSH_OLD == HIGH) {IR_on_off = !IR_on_off;}
+    else if(CFG_PUSH == LOW && CFG_PUSH_OLD == HIGH) {TEST_BUTTON = true;}
+    else if(OK_PUSH == LOW && OK_PUSH_OLD == HIGH) {OK_BUTTON = !OK_BUTTON;}
+    else if(FORWARDS_PUSH == LOW && FORWARDS_PUSH_OLD == HIGH) {FORWARDS_BUTTON = true;}
+    PWR_PUSH_OLD = PWR_PUSH;
+    CFG_PUSH_OLD = CFG_PUSH;
+    OK_PUSH_OLD = OK_PUSH;
+    FORWARDS_PUSH_OLD = FORWARDS_PUSH;
     }
-
-void check_FWU() {if(digitalRead(FWU_PIN) == LOW) {lcd.clear();FWU_MODE();}}    
-
 void FWU_MODE() {
-    lcd.createChar(0,(uint8_t *)line0_0_FWU);
-    lcd.createChar(1,(uint8_t *)line0_1_FWU);
-    lcd.createChar(2,(uint8_t *)line0_2_FWU);
-    lcd.createChar(3,(uint8_t *)line0_3_FWU);
-    lcd.createChar(4,(uint8_t *)line0_4_FWU);
-    lcd.createChar(5,(uint8_t *)line1_0_FWU);
-    lcd.createChar(6,(uint8_t *)line1_1_FWU);
+    lcd.createChar(0,line0_0_FWU);
+    lcd.createChar(1,line0_1_FWU);
+    lcd.createChar(2,line0_2_FWU);
+    lcd.createChar(3,line0_3_FWU);
+    lcd.createChar(4,line0_4_FWU);
+    lcd.createChar(5,line1_0_FWU);
+    lcd.createChar(6,line1_1_FWU);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
@@ -565,9 +724,9 @@ void FWU_MODE() {
     update_cpanel();
     //Welcome Message
     lcd.setCursor(0,0);
-    lcd.print("FIRMWARE");
+    lcd.print(F("FIRMWARE"));
     lcd.setCursor(1,1);
-    lcd.print("UPDATE");
+    lcd.print(F("UPDATE"));
     lcd.setCursor(9,1);
     lcd.write(byte(5));
     lcd.write(byte(6));
@@ -634,9 +793,9 @@ void wait_serial() {
     //Print Waiting message
     lcd.clear();
     lcd.setCursor(2,0);
-    lcd.print("WAITING FOR");
+    lcd.print(F("WAITING FOR"));
     lcd.setCursor(5,1);
-    lcd.print("HELPER");
+    lcd.print(F("HELPER"));
     current_millis = millis();
     while(Serial.available() == 0){
         //STATUS LED = YELLOW, BLINKS EVERY SECONDç
@@ -654,7 +813,7 @@ void wait_serial() {
                 current_millis = millis();
                 break;
             }
-            Serial.println("<WAITING FOR HELPER>");
+            Serial.println(F("<WAITING FOR HELPER>"));
         }
     check_on_off();
     }
@@ -663,13 +822,13 @@ void wait_serial() {
     lcd.clear();
     lcd.setCursor(3,0);
     //Desync FIX
-    lcd.print("CONNECTING");
+    lcd.print(F("CONNECTING"));
     delay(500);
     return;
 }
 
 void get_serial() {;
-    Serial.println("<WAITING>");
+    Serial.println(F("<WAITING>"));
     check_on_off();
     while(!newData) {recvWithStartEndMarkers();check_on_off();}
     showNewData();
@@ -729,7 +888,7 @@ void timeout() {
     while(counter > 0) {
         check_on_off();
         lcd.setCursor(1,0);
-        lcd.print("HELPER ERROR");
+        lcd.print(F("HELPER ERROR"));
         lcd.setCursor(0,1);
         sprintf(line1, "RECONNECT IN:%i", counter);
         lcd.print(line1);
@@ -780,9 +939,9 @@ void EEPROM_CHECK() {
         EEPROM.update(1,MODE);
         analogWrite(LCD_BL, BL_BRIGHTNESS);
         lcd.setCursor(3,0);
-        lcd.write("BAD CONFIG");
+        lcd.print(F("BAD CONFIG"));
         lcd.setCursor(4,1);
-        lcd.write("ROLLBACK");
+        lcd.print(F("ROLLBACK"));
         STATUS_LED = 0x01;
         update_cpanel();
         delay(3000);
