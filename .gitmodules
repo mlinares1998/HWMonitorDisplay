@@ -1,0 +1,3 @@
+[submodule "Proteus/Arduino-Library-for-Proteus"]
+	path = Proteus/Arduino-Library-for-Proteus
+	url = https://github.com/cyberponk/Arduino-Library-for-Proteus
