@@ -8,10 +8,11 @@ port = "55555"
 arduino = None
 HWiNFO64_dir = str(os.getcwd()) + "\\HWiNFO64"
 RSM_dir = str(os.getcwd()) + "\\Remote Sensor Monitor"
-
+selected_com = None
+com_list = None
 def welcome():
-
-    global arduino
+    global selected_com
+    global com_list
     print("Arduino HWMONITOR Helper\n")
     print("Working Dir:" + str(os.getcwd()))
     print("COM PORT LIST:\n")
@@ -26,11 +27,13 @@ def welcome():
         selected_com = 0
         time.sleep(5)
         welcome()
-    arduino = serial.Serial(str(com_list[int(selected_com) - 1]),115200)
     launchprogrmans()
     return
 
 def launchprogrmans():
+    global arduino
+    global selected_com
+    global com_list
     SW_MINIMIZE = 6
     info = subprocess.STARTUPINFO()
     info.dwFlags = subprocess.STARTF_USESHOWWINDOW
@@ -43,6 +46,7 @@ def launchprogrmans():
     print("REMOTE SENSOR MONITOR START\n")
     subprocess.Popen(RSM_dir + "\\Remote Sensor Monitor.exe --ohm=0 --AIDA64=0 --gpuz=0", startupinfo=info)
     time.sleep(5)
+    arduino = serial.Serial(str(com_list[int(selected_com) - 1]),115200)
     return
 
 def killprograms(start):
