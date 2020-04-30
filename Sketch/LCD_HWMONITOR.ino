@@ -128,27 +128,7 @@ uint8_t selected_item;
 bool CFG_USING_BUTTONS;
 
 //Version
-const char version[4] = "2.2";
-
-//Logo Chars Normal Mode
-const byte line0_0[][8] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
-const byte line0_1[][8] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
-const byte line0_1_ALT [][8] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
-const byte line0_2[][8] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
-const byte line0_3[][8] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
-const byte line1_0[][8] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
-const byte line1_1[][8] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
-const byte line1_2[][8] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
-const byte line1_3[][8] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
-
-//Logo Chars FWU
-const byte line0_0_FWU[][8] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
-const byte line0_1_FWU[][8] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
-const byte line0_2_FWU[][8] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
-const byte line0_3_FWU[][8] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
-const byte line0_4_FWU[][8] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
-const byte line1_0_FWU[][8] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
-const byte line1_1_FWU[][8] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+const char version[4] = "2.3";
 
 //Setup
 void setup()
@@ -198,14 +178,7 @@ void standby() {
     //Disable BUZZER
     BUZZER_ON = false;
     //Init Welcome Logo Chars
-    lcd.createChar(0,(uint8_t *)line0_0);
-    lcd.createChar(1,(uint8_t *)line0_1);
-    lcd.createChar(2,(uint8_t *)line0_2);
-    lcd.createChar(3,(uint8_t *)line0_3);
-    lcd.createChar(4,(uint8_t *)line1_0);
-    lcd.createChar(5,(uint8_t *)line1_1);
-    lcd.createChar(6,(uint8_t *)line1_2);
-    lcd.createChar(7,(uint8_t *)line1_3);
+    CHARLOAD(1);
     //Reset Power Buttons
     IR_on_off = false;
     //Serial OFF
@@ -250,11 +223,11 @@ void welcome() {
     current_millis = millis();
     while(millis() - current_millis <= 1000) {check_on_off();}
     current_millis = millis();
-    lcd.createChar(1,(uint8_t *)line0_1_ALT);
+    CHARLOAD(2);
     CPU_LED = 0x02;
     update_cpanel();
     while(millis() - current_millis <= 350) {check_on_off();}
-    lcd.createChar(1,(uint8_t *)line0_1);
+    CHARLOAD(1);
     current_millis = millis();
     while(millis() - current_millis <= 650) {check_on_off();}
     GPU_LED = 0x02;
@@ -674,25 +647,25 @@ void getsensors() {
     //Read DHT11 every 1.5s and judge the state according to the return value
     if(DHT_Counter == 3) {int chk = DHT.read11(TEMP_HUMIDITY); DHT_Counter = 0;}
     // Decode Serial Data Array
-    char *array_table[20];
+    char *array_table[252];
     int i = 0;
     //Create an Array separating received data
     //OPTIMIZE THIS PLZ :D
-    array_table[i] = strtok(receivedChars,",");
+    array_table[i] = strtok(receivedChars,":");
     while(array_table[i] != NULL) {
-        array_table[++i] = strtok(NULL,",");
+        array_table[++i] = strtok(NULL,":");
     }
     for(int i = 0; array_table[i] != NULL; i +=2) {
-        if(String(array_table[i]) == (F("UR"))) {RAM_USED = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("FR"))) {RAM_FREE = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("CC"))) {CPU_CLK = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("CU"))) {CPU_USAGE = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("CT"))) {CPU_TEMP = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("CV"))) {CPU_VCORE = String(array_table[i+1]).toFloat();}
-        else if(String(array_table[i]) == (F("GV"))) {GPU_VCORE = String(array_table[i+1]).toFloat();}
-        else if(String(array_table[i]) == (F("GT"))) {GPU_TEMP = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("GC"))) {GPU_CLK = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == (F("FP"))) {GPU_FPS = String(array_table[i+1]).toInt();}
+        if(String(array_table[i]) == "UR") {RAM_USED = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "FR") {RAM_FREE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CC") {CPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CU") {CPU_USAGE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CT") {CPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CV") {CPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == "GV") {GPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == "GT") {GPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "GC") {GPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "FP") {GPU_FPS = String(array_table[i+1]).toInt();}
     }
     return;
 }
@@ -719,13 +692,7 @@ void check_BUTTONS() {
 
 //FIRMWARE UPDATE MODE
 void FWU_MODE() {
-    lcd.createChar(0,(uint8_t *)line0_0_FWU);
-    lcd.createChar(1,(uint8_t *)line0_1_FWU);
-    lcd.createChar(2,(uint8_t *)line0_2_FWU);
-    lcd.createChar(3,(uint8_t *)line0_3_FWU);
-    lcd.createChar(4,(uint8_t *)line0_4_FWU);
-    lcd.createChar(5,(uint8_t *)line1_0_FWU);
-    lcd.createChar(6,(uint8_t *)line1_1_FWU);
+    CHARLOAD(3);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
@@ -933,3 +900,83 @@ void OK_tone() {
 
 // Restarts program from beginning but does not reset the peripherals and registers
 void soft_Reset() {asm volatile ("  jmp 0");  }
+
+//LOAD CUSTOM LOGOS FROM FLASH TO RAM
+void CHARLOAD(int mode) {
+
+    //START LOGO OLD
+    static const byte PROGMEM line0_0_START[8]  = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
+    static const byte PROGMEM line0_1_START[8] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
+    static const byte PROGMEM line0_1_START_ALT[8] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
+    static const byte PROGMEM line0_2_START[8] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
+    static const byte PROGMEM line0_3_START[8] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
+    static const byte PROGMEM line1_0_START[8] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
+    static const byte PROGMEM line1_1_START[8] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
+    static const byte PROGMEM line1_2_START[8] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
+    static const byte PROGMEM line1_3_START[8] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
+
+    //FWU LOGO
+    static const byte PROGMEM line0_0_FWU[8] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
+    static const byte PROGMEM line0_1_FWU[8] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
+    static const byte PROGMEM line0_2_FWU[8] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
+    static const byte PROGMEM line0_3_FWU[8] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
+    static const byte PROGMEM line0_4_FWU[8] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
+    static const byte PROGMEM line1_0_FWU[8] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
+    static const byte PROGMEM line1_1_FWU[8] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+    //Custom Chars BUFFER
+    byte RAMCHARS[8] = {};
+    switch(mode) {
+        case 1:
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_START[i];
+            lcd.createChar(0,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_START[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_START[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_START[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_START[i];
+            lcd.createChar(4,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_START[i];
+            lcd.createChar(5,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_2_START[i];
+            lcd.createChar(6,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_3_START[i];
+            lcd.createChar(7,(uint8_t *)RAMCHARS);
+            break;
+        case 2:
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_START[i];
+            lcd.createChar(0,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_START_ALT[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_START[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_START[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_START[i];
+            lcd.createChar(4,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_START[i];
+            lcd.createChar(5,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_2_START[i];
+            lcd.createChar(6,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_3_START[i];
+            lcd.createChar(7,(uint8_t *)RAMCHARS);
+            break;
+        case 3:
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_FWU[i];
+            lcd.createChar(0,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_FWU[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_FWU[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_FWU[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_4_FWU[i];
+            lcd.createChar(4,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_FWU[i];
+            lcd.createChar(5,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_FWU[i];
+            lcd.createChar(6,(uint8_t *)RAMCHARS);
+            break;
+        }
+}
