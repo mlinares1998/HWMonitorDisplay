@@ -61,6 +61,7 @@ volatile bool IR_9;
 int STATUS_LED = 0x00;
 int CPU_LED = 0x00;
 int GPU_LED = 0x00;
+int RAM_LED = 0x00;
 
 //Monitoring Variables
 int CPU_TEMP = 0;
@@ -85,7 +86,7 @@ int scroll_delay = 0;
 const byte numChars = 255;
 char receivedChars[numChars];
 boolean newData = false;
-
+unsigned long timeoutcounter = 0;
 //LCD Lines Arrays
 char line0[17];
 char line1[16];
@@ -93,8 +94,27 @@ char line1[16];
 //DHT11 Reading Delay
 int DHT_Counter;
 //Version
-char version[4] = "1.1";
+char version[4] = "1.3";
 
+//Logo Chars Normal Mode
+byte line0_0[] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
+byte line0_1[] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
+byte line0_1_ALT [] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
+byte line0_2[] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
+byte line0_3[] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
+byte line1_0[] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
+byte line1_1[] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
+byte line1_2[] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
+byte line1_3[] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
+
+//Logo Chars FWU
+byte line0_0_FWU[] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
+byte line0_1_FWU[] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
+byte line0_2_FWU[] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
+byte line0_3_FWU[] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
+byte line0_4_FWU[] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
+byte line1_0_FWU[] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
+byte line1_1_FWU[] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
 //Setup
 void setup()
 {
@@ -111,10 +131,18 @@ pinMode(LCD_RS,OUTPUT);
 pinMode(LED_DATAPIN,OUTPUT);
 pinMode(LED_LATCHPIN,OUTPUT);
 pinMode(LED_CLOCKPIN,OUTPUT);
-pinMode(FWU_PIN, INPUT);
+pinMode(FWU_PIN, INPUT_PULLUP);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 lcd.begin(16,2); //LCD Start
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
+lcd.createChar(0,line0_0);
+lcd.createChar(1,line0_1);
+lcd.createChar(2,line0_2);
+lcd.createChar(3,line0_3);
+lcd.createChar(4,line1_0);
+lcd.createChar(5,line1_1);
+lcd.createChar(6,line1_2);
+lcd.createChar(7,line1_3);
 }
 
 
@@ -131,11 +159,13 @@ void loop() {
 //Main Functions
 
 void standby() {
+    //Serial OFF
+    Serial.end();
+    //Restore Original Chars (After Blink)
+    lcd.createChar(3,line0_3);
     IR_on_off = false;
     scroll_counter = 1;
     scroll_delay = 0;
-    //Serial OFF
-    Serial.end();
     //LCD Clear and shutdown
     lcd.clear();
     analogWrite(LCD_BL,0);
@@ -143,6 +173,7 @@ void standby() {
     STATUS_LED = 0x01;
     CPU_LED = 0x00;
     GPU_LED = 0x00;
+    RAM_LED = 0x00;
     update_cpanel();
     //Wait until ON/OFF Button is pushed
     while(!IR_on_off) {check_FWU();}
@@ -153,21 +184,42 @@ void welcome() {
     //LCD Startup, load brightness value stored in EEPROM
     EEPROM_READ();
     analogWrite(LCD_BL, BL_BRIGHTNESS);
-    //STATUS_LED = GREEN
-    STATUS_LED = 0x02;
-    update_cpanel();
     //Welcome Message
     lcd.clear();
-    lcd.print("HARDWARE MONITOR");
-    lcd.setCursor(0,1);
-    sprintf(line1,"MAJL 2DOMEL V%s", version);
-    lcd.print(line1);
+    lcd.setCursor(6,0);
+    lcd.write(byte(0));
+    lcd.write(byte(1));
+    lcd.write(byte(2));
+    lcd.write(byte(3));
+    lcd.setCursor(6,1);
+    lcd.write(byte(4));
+    lcd.write(byte(5));
+    lcd.write(byte(6));
+    lcd.write(byte(7));
+    lcd.setCursor(13,1);
+    lcd.print(version);
     //Show Splash for 3 seconds
-    unsigned long current_millis = millis();
-    while(millis() - current_millis <= 3000) {check_on_off();}
-    //STATUS_LED = GREEN
+    //Leds GREEN Progressively
     STATUS_LED = 0x02;
     update_cpanel();
+    current_millis = millis();
+    while(millis() - current_millis <= 1000) {check_on_off();}
+    current_millis = millis();
+    lcd.createChar(1,line0_1_ALT);
+    CPU_LED = 0x02;
+    update_cpanel();
+    while(millis() - current_millis <= 350) {check_on_off();}
+    lcd.createChar(1,line0_1);
+    current_millis = millis();
+    while(millis() - current_millis <= 650) {check_on_off();}
+    GPU_LED = 0x02;
+    update_cpanel();
+    current_millis = millis();
+    while(millis() - current_millis <= 1000) {check_on_off();}
+    RAM_LED = 0x02;
+    update_cpanel();
+    current_millis = millis();
+    while(millis() - current_millis <= 1000) {check_on_off();}
     lcd.clear();
     IR_play = false;
     return;
@@ -246,19 +298,21 @@ void advanced_menu() {
 }
 
 //Settings Menu
-void config(bool Splash) {
-    if(Splash = true) {
-        //Disable CPU and GPU LEDS
-        CPU_LED = 0x00;
-        GPU_LED = 0x00;
-        update_cpanel();
-        //Show Settings splash for 3 seconds
-        lcd.clear();
-        lcd.setCursor(4,0);
-        lcd.write("SETTINGS");
-        current_millis = millis();
-        while(millis() - current_millis <= 2000) {check_on_off();}
-    }
+void config() {
+    //Disable CPU and GPU LEDS
+    CPU_LED = 0x00;
+    GPU_LED = 0x00;
+    RAM_LED = 0x00;
+    update_cpanel();
+    //Show Settings splash for 3 seconds
+    lcd.clear();
+    lcd.setCursor(4,0);
+    lcd.write("SETTINGS");
+    current_millis = millis();
+    while(millis() - current_millis <= 2000) {check_on_off();}
+    config_nosplash();
+}
+void config_nosplash() {
     //Clear IR buttons values
     IR_1 = false;
     IR_2 = false;
@@ -299,7 +353,7 @@ void modes_select() {
     if(IR_1) {MODE = 1;}
     else if(IR_2) {MODE = 2;}
     else if(IR_3) {MODE = 3;}
-    else if (IR_back) {config(false);}
+    else if (IR_back) {config_nosplash();}
     //Reset Scroll counter
     scroll_counter = 1;
     scroll_delay = 0;
@@ -347,7 +401,7 @@ void brightness_select(bool brightness) {
         brightness_select(false);
     }
     else if(IR_play){IR_play = false; return;}
-    else if(IR_back) {analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); BL_BRIGHTNESS = OLD_BL_BRIGHTNESS; config(false);}
+    else if(IR_back) {analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); BL_BRIGHTNESS = OLD_BL_BRIGHTNESS; config_nosplash();}
     else {brightness_select(false);}
 }
 
@@ -426,7 +480,7 @@ void wait_to_refresh() {
         //Get serial data
         get_serial();
         //If settings button is pushed, go to settings
-        if(IR_test) {config(true);}
+        if(IR_test) {config();}
     }
     //Get sensors data
     getsensors();
@@ -437,6 +491,9 @@ void wait_to_refresh() {
     if(GPU_TEMP < 60) {GPU_LED = 0x02;}
     else if((GPU_TEMP >= 60) && (GPU_TEMP < 80)) {GPU_LED = 0x03;}
     else if(GPU_TEMP >= 80) {GPU_LED = 0x01;}
+    if(RAM_FREE >= 2000) {RAM_LED = 0x02;}
+    else if((RAM_FREE >= 1000) && (RAM_FREE < 1999)) {RAM_LED = 0x03;}
+    else if(RAM_FREE < 999) {RAM_LED = 0x01;}
     update_cpanel();
     //Increase DHT Delay Counter
     DHT_Counter++;
@@ -455,6 +512,19 @@ void getsensors() {
     while(array_table[i] != NULL) {
         array_table[++i] = strtok(NULL,",");
     }
+    for(int i = 0; array_table[i] != NULL; i +=2) {
+        if(String(array_table[i]) == "UR") {RAM_USED = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "FR") {RAM_FREE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CC") {CPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CU") {CPU_USAGE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CT") {CPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "CV") {CPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == "GV") {GPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == "GT") {GPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "GC") {GPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == "FP") {GPU_FPS = String(array_table[i+1]).toInt();}
+    }
+    /*
     RAM_USED = String(array_table[1]).toInt();
     RAM_FREE = String(array_table[3]).toInt();
     CPU_CLK = String(array_table[5]).toInt();
@@ -465,6 +535,7 @@ void getsensors() {
     GPU_TEMP = String(array_table[15]).toInt();
     GPU_CLK = String(array_table[17]).toInt();
     GPU_FPS = String(array_table[19]).toInt();
+    */
     return;
 }
 
@@ -477,18 +548,37 @@ void check_on_off() {
 void check_FWU() {if(digitalRead(FWU_PIN) == LOW) {lcd.clear();FWU_MODE();}}    
 
 void FWU_MODE() {
+    lcd.createChar(0,line0_0_FWU);
+    lcd.createChar(1,line0_1_FWU);
+    lcd.createChar(2,line0_2_FWU);
+    lcd.createChar(3,line0_3_FWU);
+    lcd.createChar(4,line0_4_FWU);
+    lcd.createChar(5,line1_0_FWU);
+    lcd.createChar(6,line1_1_FWU);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
     STATUS_LED = 0x03;
     CPU_LED = 0x03;
     GPU_LED = 0x03;
+    RAM_LED = 0x03;
     update_cpanel();
     //Welcome Message
-    lcd.setCursor(4,0);
-    lcd.print("FWU MODE");
+    lcd.setCursor(0,0);
+    lcd.print("FIRMWARE");
     lcd.setCursor(1,1);
-    lcd.print("UPLOAD SKETCH");
+    lcd.print("UPDATE");
+    lcd.setCursor(9,1);
+    lcd.write(byte(5));
+    lcd.write(byte(6));
+    lcd.setCursor(11,0);
+    lcd.write(byte(0));
+    lcd.write(byte(1));
+    lcd.write(byte(2));
+    lcd.write(byte(3));
+    lcd.write(byte(4));
+    lcd.setCursor(13,1);
+    lcd.print(version);
     current_millis = millis();
     while(true) {
         //STATUS LED = YELLOW, BLINKS EVERY SECOND
@@ -498,6 +588,7 @@ void FWU_MODE() {
                 STATUS_LED = 0x03;
                 CPU_LED = 0x03;
                 GPU_LED = 0x03;
+                RAM_LED = 0x03;
                 update_cpanel();
                 current_millis = millis();
                 break;
@@ -506,6 +597,7 @@ void FWU_MODE() {
                 STATUS_LED = 0x00;
                 CPU_LED = 0x00;
                 GPU_LED = 0x00;
+                RAM_LED = 0x00;
                 update_cpanel();
                 current_millis = millis();
                 break;
@@ -517,7 +609,7 @@ void FWU_MODE() {
 
 //74HC595 (CPANEL) output
 void update_cpanel() {
-    byte CPANEL = STATUS_LED + (CPU_LED << 2) + (GPU_LED << 4);
+    byte CPANEL = RAM_LED + (GPU_LED << 2) + (CPU_LED << 4) + (STATUS_LED << 6);
     for (int j = 0; j < 8; j++) 
     {
     // Output low level to latchPin
@@ -530,11 +622,13 @@ void update_cpanel() {
 }
 
 void wait_serial() {
+    timeoutcounter = 0;
     scroll_delay = 0;
     Serial.begin(115200); //Serial Start
     //STATUS_LED = OFF
     CPU_LED = 0x00;
     GPU_LED = 0x00;
+    RAM_LED = 0x00;
     STATUS_LED = 0x03;
     update_cpanel();
     //Print Waiting message
@@ -543,7 +637,7 @@ void wait_serial() {
     lcd.print("WAITING FOR");
     lcd.setCursor(5,1);
     lcd.print("HELPER");
-    unsigned long current_millis = millis();
+    current_millis = millis();
     while(Serial.available() == 0){
         //STATUS LED = YELLOW, BLINKS EVERY SECONDç
         if(millis() - current_millis >= 1000) {
@@ -560,9 +654,9 @@ void wait_serial() {
                 current_millis = millis();
                 break;
             }
-            check_on_off();
             Serial.println("<WAITING FOR HELPER>");
         }
+    check_on_off();
     }
     STATUS_LED = 0x02;
     update_cpanel();
@@ -589,12 +683,10 @@ void recvWithStartEndMarkers() {
     char startMarker = '<';
     char endMarker = '>';
     char rc;
-    int timeoutcounter = 0;
     //Increase Timeout if Serial fails
     while (Serial.available() == 0) {
-        timeoutcounter++;
-        if(timeoutcounter == 5000) {lcd.clear();timeout();}
-    }
+        if(timeoutcounter == 1000000) {lcd.clear();timeout();}
+        timeoutcounter++;}
     while (Serial.available() > 0 && newData == false) {
         timeoutcounter = 0;
         rc = Serial.read();
@@ -628,9 +720,10 @@ void showNewData() {
 
 void timeout() {
     int counter = 5;
-    STATUS_LED = 0x00;
-    CPU_LED = 0x00;
-    GPU_LED = 0x00;
+    STATUS_LED = 0x01;
+    CPU_LED = 0x01;
+    GPU_LED = 0x01;
+    RAM_LED = 0x01;
     update_cpanel();
     current_millis = millis();
     while(counter > 0) {
@@ -646,6 +739,7 @@ void timeout() {
                 STATUS_LED = 0x01;
                 CPU_LED = 0x01;
                 GPU_LED = 0x01;
+                RAM_LED = 0x01;
                 update_cpanel();
                 current_millis = millis();
                 counter--;
@@ -655,6 +749,7 @@ void timeout() {
                 STATUS_LED = 0x00;
                 CPU_LED = 0x00;
                 GPU_LED = 0x00;
+                RAM_LED = 0x00;
                 update_cpanel();
                 current_millis = millis();
                 counter--;
