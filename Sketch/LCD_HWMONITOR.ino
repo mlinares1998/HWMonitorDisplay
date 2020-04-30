@@ -5,6 +5,7 @@
 #include <IRremote.h>
 #include <EEPROM.h>
 #include <NewTone.h>
+#include <Bounce2.h>
 
 //Pins
 const int PROGMEM IR_DIODE = 2;
@@ -23,7 +24,7 @@ const int PROGMEM FWU_PIN = A0;
 const int PROGMEM PWR_PHYS = A1;
 const int PROGMEM CFG_PHYS = A2;
 const int PROGMEM OK_PHYS = A3;
-const int PROGMEM FORWARD_PHYS = A4;
+const int PROGMEM FORWARDS_PHYS = A4;
 const int PROGMEM TEMP_HUMIDITY = A5;
 
 //LCD Screen Init
@@ -39,7 +40,9 @@ decode_results IR_RESULT;
 //Internal Variables
 unsigned long current_millis; //To wait without using delay()
 int BL_BRIGHTNESS; //Brightness value (0-250)
-int OLD_BL_BRIGHTNESS;
+int OLD_BL_BRIGHTNESS; //Brightness Rollback if settings are not applied
+bool BUZZER_CFG = true; //BUZZER Setting Read from EEPROM
+bool BUZZER_ON; //Enable / Disable BUZZER
 
 //IR Remote buttons
 volatile bool IR_on_off;
@@ -96,26 +99,26 @@ unsigned long timeoutcounter = 0;
 //LCD Lines Arrays
 char line0[17];
 char line1[16];
+//FUTURE
+char line2[16];
+char line3[16];
 
 //DHT11 Reading Delay
 int DHT_Counter;
 
 //Button Variables
-bool PWR_PUSH = LOW;
-bool CFG_PUSH = LOW;
-bool OK_PUSH = LOW;
-bool FORWARDS_PUSH = LOW;
-bool PWR_PUSH_OLD = LOW;
-bool CFG_PUSH_OLD = LOW;
-bool OK_PUSH_OLD = LOW;
-bool FORWARDS_PUSH_OLD = LOW;
+//Using Bounce2 Library to deal with button bounce
+Bounce debouncerPWR = Bounce();
+Bounce debouncerCFG = Bounce();
+Bounce debouncerOK = Bounce();
+Bounce debouncerFORWARDS = Bounce();
 bool TEST_BUTTON = false;
 bool OK_BUTTON = false;
 bool FORWARDS_BUTTON = false;
-int selected_item = 1;
+int selected_item;
 
 //Version
-const char version[4] = "2.0";
+const char version[4] = "2.1";
 
 //Logo Chars Normal Mode
 const byte line0_0[][8] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
@@ -153,22 +156,18 @@ pinMode(LED_DATAPIN,OUTPUT);
 pinMode(LED_LATCHPIN,OUTPUT);
 pinMode(LED_CLOCKPIN,OUTPUT);
 pinMode(FWU_PIN, INPUT_PULLUP);
-pinMode(PWR_PHYS, INPUT_PULLUP);
-pinMode(CFG_PHYS, INPUT_PULLUP);
-pinMode(OK_PHYS, INPUT_PULLUP);
-pinMode(FORWARD_PHYS, INPUT_PULLUP);
+debouncerPWR.attach(PWR_PHYS,INPUT_PULLUP);
+debouncerCFG.attach(CFG_PHYS,INPUT_PULLUP);
+debouncerOK.attach(OK_PHYS,INPUT_PULLUP);
+debouncerFORWARDS.attach(FORWARDS_PHYS,INPUT_PULLUP);
+debouncerPWR.interval(25);
+debouncerCFG.interval(25);
+debouncerOK.interval(25);
+debouncerFORWARDS.interval(25);
 pinMode(TEMP_HUMIDITY,INPUT);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
 lcd.begin(16,2); //LCD Start
-lcd.createChar(0,(uint8_t *)line0_0);
-lcd.createChar(1,(uint8_t *)line0_1);
-lcd.createChar(2,(uint8_t *)line0_2);
-lcd.createChar(3,(uint8_t *)line0_3);
-lcd.createChar(4,(uint8_t *)line1_0);
-lcd.createChar(5,(uint8_t *)line1_1);
-lcd.createChar(6,(uint8_t *)line1_2);
-lcd.createChar(7,(uint8_t *)line1_3);
 }
 
 //Loop
@@ -181,17 +180,23 @@ void loop() {
 //Main Functions
 
 void standby() {
-    //Reset Buttons States
-    TEST_BUTTON = false;
-    OK_BUTTON = false;
-    FORWARDS_BUTTON = false;
+    //Load Settings from EEPROM
+    EEPROM_READ();
+    //Disable BUZZER
+    BUZZER_ON = false;
+    //Init Welcome Logo Chars
+    lcd.createChar(0,(uint8_t *)line0_0);
+    lcd.createChar(1,(uint8_t *)line0_1);
+    lcd.createChar(2,(uint8_t *)line0_2);
+    lcd.createChar(3,(uint8_t *)line0_3);
+    lcd.createChar(4,(uint8_t *)line1_0);
+    lcd.createChar(5,(uint8_t *)line1_1);
+    lcd.createChar(6,(uint8_t *)line1_2);
+    lcd.createChar(7,(uint8_t *)line1_3);
+    //Reset Power Buttons
+    IR_on_off = false;
     //Serial OFF
     Serial.end();
-    //Restore Original Chars (After Blink)
-    lcd.createChar(3,(uint8_t *)line0_3);
-    IR_on_off = false;
-    scroll_counter = 1;
-    scroll_delay = 0;
     //LCD Clear and shutdown
     lcd.clear();
     analogWrite(LCD_BL,0);
@@ -203,12 +208,13 @@ void standby() {
     update_cpanel();
     //Wait until ON/OFF Button is pushed
     while(!IR_on_off) {check_BUTTONS();}
+    BUZZER_ON = true;
+    OK_tone();
     return;   
 }
 
 void welcome() {
-    //LCD Startup, load brightness value stored in EEPROM
-    EEPROM_READ();
+    //LCD Startup
     analogWrite(LCD_BL, BL_BRIGHTNESS);
     //Welcome Message
     lcd.clear();
@@ -247,80 +253,132 @@ void welcome() {
     current_millis = millis();
     while(millis() - current_millis <= 1000) {check_on_off();}
     lcd.clear();
-    IR_play = false;
     return;
-}
-void monitor() {
-    //Clear IR button values
-    IR_test = false;
-    wait_to_refresh();
-    //Enter selected mode
-    if(MODE == 1) {
-        lcd.setCursor(0,0);
-        sprintf(line0, "CPU:%-3i" "C" "   %%:%-3i", CPU_TEMP,CPU_USAGE);
-        lcd.print(line0);
-        lcd.setCursor(0,1);
-        sprintf(line1, "GPU:%-3i" "C" "  %-3iFPS", GPU_TEMP,GPU_FPS);
-        lcd.print(line1);
-    }
-    else if (MODE == 2 || MODE == 3) {advanced_menu();}
-    monitor(); 
 }
 
-void advanced_menu() {
-    switch(scroll_counter) {
-        //CPU STATS
-        case 1:
-            lcd.setCursor(0,0);
-            sprintf(line0, "CPU:%-3i" "C" " SP:%-4i", CPU_TEMP, CPU_FAN);
-            lcd.print(line0);
-            lcd.setCursor(0,1);
-            sprintf(line1, "CLK:%-4iM" " %%:%-3i", CPU_CLK,CPU_USAGE);
-            lcd.print(line1);
-            break;
-        //GPU STATS
-        case 2:
-            lcd.setCursor(0,0);
-            sprintf(line0, "GPU:%-3i" "C" " SP:%-4i", GPU_TEMP, GPU_FAN);
-            lcd.print(line0);
-            lcd.setCursor(0,1);
-            sprintf(line1, "CLK:%-4iM" " %-3iFPS", GPU_CLK,GPU_FPS);
-            lcd.print(line1);
-            break;
-        //CPU,GPU VCORE Performance
-        case 3:
-            //VCORE Float reading to String
-            char GPU_VCORE_STR[5];
-            char CPU_VCORE_STR[5];
-            dtostrf(GPU_VCORE,4, 2, GPU_VCORE_STR);
-            dtostrf(CPU_VCORE,4, 2, CPU_VCORE_STR);
-            lcd.setCursor(0,0);
-            sprintf(line0, "CPU:%-4sV" "  %%:%-3i", CPU_VCORE_STR, CPU_USAGE);
-            lcd.print(line0);
-            sprintf(line1, "GPU:%-4sV" " %-3iFPS", GPU_VCORE_STR, GPU_FPS);
-            lcd.setCursor(0,1);
-            lcd.print(line1);
-            break;
-        //RAM STATS
-        case 4:
-            lcd.setCursor(0,0);
-            sprintf(line0, "USED RAM:" "%-5u" "MB", RAM_USED);
-            lcd.print(line0);
-            lcd.setCursor(0,1);
-            sprintf(line1, "FREE RAM:" "%-5u" "MB", RAM_FREE);
-            lcd.print(line1);
-            break;
-        //Room Temp/Humidity
-        case 5:
-            lcd.setCursor(0,0);
-            sprintf(line0, "RoomTemp:" "%-3i" "\xDF" "C", int(DHT.temperature));
-            lcd.print(line0);
-            lcd.setCursor(0,1);
-            sprintf(line1, "Humidity:" "%-3i" "%%", int(DHT.humidity));
-            lcd.print(line1);
-            break;
+void wait_serial() {
+    Serial.begin(115200); //Serial Start
+    //STATUS_LED = YELLOW OTHERS = OFF
+    CPU_LED = 0x00;
+    GPU_LED = 0x00;
+    RAM_LED = 0x00;
+    STATUS_LED = 0x03;
+    update_cpanel();
+    //Print Waiting message
+    lcd.clear();
+    lcd.setCursor(2,0);
+    lcd.print(F("WAITING FOR"));
+    lcd.setCursor(5,1);
+    lcd.print(F("HELPER"));
+    current_millis = millis();
+    while(Serial.available() == 0){
+        //STATUS LED = YELLOW, BLINKS EVERY SECONDç
+        if(millis() - current_millis >= 1000) {
+            switch (STATUS_LED) {
+                case 0x00:
+                STATUS_LED = 0x03;
+                update_cpanel();
+                current_millis = millis();
+                break;
+
+                case 0x03:
+                STATUS_LED = 0x00;
+                update_cpanel();
+                current_millis = millis();
+                break;
+            }
+            Serial.println(F("<WAITING FOR HELPER>"));
+        }
+    check_on_off();
     }
+    //STATUS LED = GREEN
+    STATUS_LED = 0x02;
+    update_cpanel();
+    lcd.clear();
+    lcd.setCursor(3,0);
+    //Desync FIX
+    lcd.print(F("CONNECTING"));
+    delay(500);
+    //Reset Buttons and Delays
+    TEST_BUTTON = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    IR_play = false;
+    scroll_counter = 1;
+    scroll_delay = 0;
+    timeoutcounter = 0;
     return;
+}
+
+void monitor() {
+    while(true) {
+        //Clear IR button values
+        IR_test = false;
+        wait_to_refresh();
+        //Enter selected mode
+        if(MODE == 1) {
+            lcd.setCursor(0,0);
+            sprintf(line0, "CPU:%-3i" "C" "   %%:%-3i", CPU_TEMP,CPU_USAGE);
+            lcd.print(line0);
+            lcd.setCursor(0,1);
+            sprintf(line1, "GPU:%-3i" "C" "  %-3iFPS", GPU_TEMP,GPU_FPS);
+            lcd.print(line1);
+        }
+        else if (MODE == 2 || MODE == 3) {
+            switch(scroll_counter) {
+            //CPU STATS
+            case 1:
+                lcd.setCursor(0,0);
+                sprintf(line0, "CPU:%-3i" "C" " SP:%-4i", CPU_TEMP, CPU_FAN);
+                lcd.print(line0);
+                lcd.setCursor(0,1);
+                sprintf(line1, "CLK:%-4iM" " %%:%-3i", CPU_CLK,CPU_USAGE);
+                lcd.print(line1);
+                break;
+            //GPU STATS
+            case 2:
+                lcd.setCursor(0,0);
+                sprintf(line0, "GPU:%-3i" "C" " SP:%-4i", GPU_TEMP, GPU_FAN);
+                lcd.print(line0);
+                lcd.setCursor(0,1);
+                sprintf(line1, "CLK:%-4iM" " %-3iFPS", GPU_CLK,GPU_FPS);
+                lcd.print(line1);
+                break;
+            //CPU,GPU VCORE Performance
+            case 3:
+                //VCORE Float reading to String
+                char GPU_VCORE_STR[5];
+                char CPU_VCORE_STR[5];
+                dtostrf(GPU_VCORE,4, 2, GPU_VCORE_STR);
+                dtostrf(CPU_VCORE,4, 2, CPU_VCORE_STR);
+                lcd.setCursor(0,0);
+                sprintf(line0, "CPU:%-4sV" "  %%:%-3i", CPU_VCORE_STR, CPU_USAGE);
+                lcd.print(line0);
+                sprintf(line1, "GPU:%-4sV" " %-3iFPS", GPU_VCORE_STR, GPU_FPS);
+                lcd.setCursor(0,1);
+                lcd.print(line1);
+                break;
+            //RAM STATS
+            case 4:
+                lcd.setCursor(0,0);
+                sprintf(line0, "USED RAM:" "%-5u" "MB", RAM_USED);
+                lcd.print(line0);
+                lcd.setCursor(0,1);
+                sprintf(line1, "FREE RAM:" "%-5u" "MB", RAM_FREE);
+                lcd.print(line1);
+                break;
+            //Room Temp/Humidity
+            case 5:
+                lcd.setCursor(0,0);
+                sprintf(line0, "RoomTemp:" "%-3i" "\xDF" "C", int(DHT.temperature));
+                lcd.print(line0);
+                lcd.setCursor(0,1);
+                sprintf(line1, "Humidity:" "%-3i" "%%", int(DHT.humidity));
+                lcd.print(line1);
+                break;
+            }
+        }
+    }
 }
 
 //Settings Menu
@@ -617,10 +675,16 @@ void check_IR() {
 }
 
 void wait_to_refresh() {
+    get_serial();
+    //Wait 1.2 Seconds until refresh
+    current_millis = millis();
+    while (millis() - current_millis <= 400) {check_on_off();}
     //Pause if IR Play is pushed (MODE 2)
-    if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
+    //If settings button is pushed, go to settings
+    if(IR_test || TEST_BUTTON) {config();}
+    else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
         scroll_delay++;
-        if(scroll_delay == 10) {scroll_counter++;scroll_delay = 0;lcd.clear();}
+        if(scroll_delay == 5) {scroll_counter++;scroll_delay = 0;lcd.clear();}
     }
 
     //Manual Control (MODE 3)
@@ -631,15 +695,6 @@ void wait_to_refresh() {
     //Back to Start/End
     if(scroll_counter == 6) {scroll_counter = 1;lcd.clear();}
     else if(scroll_counter == 0) {scroll_counter = 5;lcd.clear();}
-    //Wait 1.2 Seconds until refresh
-    current_millis = millis();
-    while(millis() - current_millis <=200) {
-        check_on_off();
-        //Get serial data
-        get_serial();
-        //If settings button is pushed, go to settings
-        if(IR_test || TEST_BUTTON) {config();}
-    }
     //Get sensors data
     getsensors();
     //LED Updating
@@ -660,7 +715,7 @@ void wait_to_refresh() {
 
 void getsensors() {
     //Read DHT11 every 1.2s and judge the state according to the return value
-    if(DHT_Counter == 5) {int chk = DHT.read11(TEMP_HUMIDITY); DHT_Counter = 0;}
+    if(DHT_Counter == 3) {int chk = DHT.read11(TEMP_HUMIDITY); DHT_Counter = 0;}
     // Decode Serial Data Array
     char *array_table[20];
     int i = 0;
@@ -687,26 +742,22 @@ void getsensors() {
 
 //Check if Power button is pressed, ON -> OFF, OFF -> ON
 void check_on_off() {
-    if(IR_on_off == false) {loop();}
+    if(IR_on_off == false) {OK_tone();delay(100);soft_Reset();}
     check_BUTTONS();
     return;
 }
 
 void check_BUTTONS() {
+    debouncerPWR.update();
+    debouncerCFG.update();
+    debouncerOK.update();
+    debouncerFORWARDS.update();
     //Down Flank Detection
     if(digitalRead(FWU_PIN) == LOW) {lcd.clear();FWU_MODE();}
-    PWR_PUSH = digitalRead(PWR_PHYS);
-    CFG_PUSH = digitalRead(CFG_PHYS);
-    OK_PUSH = digitalRead(OK_PHYS);
-    FORWARDS_PUSH = digitalRead(FORWARD_PHYS);
-    if(PWR_PUSH == LOW && PWR_PUSH_OLD == HIGH) {OK_tone();IR_on_off = !IR_on_off;}
-    else if(CFG_PUSH == LOW && CFG_PUSH_OLD == HIGH) {OK_tone();TEST_BUTTON = true;}
-    else if(OK_PUSH == LOW && OK_PUSH_OLD == HIGH) {OK_tone();OK_BUTTON = !OK_BUTTON;}
-    else if(FORWARDS_PUSH == LOW && FORWARDS_PUSH_OLD == HIGH) {OK_tone();FORWARDS_BUTTON = true;}
-    PWR_PUSH_OLD = PWR_PUSH;
-    CFG_PUSH_OLD = CFG_PUSH;
-    OK_PUSH_OLD = OK_PUSH;
-    FORWARDS_PUSH_OLD = FORWARDS_PUSH;
+    if(debouncerPWR.fell()) {IR_on_off = !IR_on_off;}
+    if(debouncerCFG.fell()) {OK_tone();TEST_BUTTON = true;}
+    if(debouncerOK.fell()) {OK_tone();OK_BUTTON = !OK_BUTTON;}
+    if(debouncerFORWARDS.fell()) {OK_tone();FORWARDS_BUTTON = true;}
     }
 void FWU_MODE() {
     lcd.createChar(0,(uint8_t *)line0_0_FWU);
@@ -744,6 +795,7 @@ void FWU_MODE() {
     while(true) {
         //STATUS LED = YELLOW, BLINKS EVERY SECOND
         if(millis() - current_millis >= 1000) {
+            if((digitalRead(FWU_PIN) == HIGH)) {lcd.clear(); lcd.setCursor(5,0); lcd.print(F("REBOOT"));delay(1000);soft_Reset();}
             switch (STATUS_LED) {
                 case 0x00:
                 STATUS_LED = 0x03;
@@ -784,59 +836,10 @@ void update_cpanel() {
     }
 }
 
-void wait_serial() {
-    timeoutcounter = 0;
-    scroll_delay = 0;
-    Serial.begin(115200); //Serial Start
-    //STATUS_LED = OFF
-    CPU_LED = 0x00;
-    GPU_LED = 0x00;
-    RAM_LED = 0x00;
-    STATUS_LED = 0x03;
-    update_cpanel();
-    //Print Waiting message
-    lcd.clear();
-    lcd.setCursor(2,0);
-    lcd.print(F("WAITING FOR"));
-    lcd.setCursor(5,1);
-    lcd.print(F("HELPER"));
-    current_millis = millis();
-    while(Serial.available() == 0){
-        //STATUS LED = YELLOW, BLINKS EVERY SECONDç
-        if(millis() - current_millis >= 1000) {
-            switch (STATUS_LED) {
-                case 0x00:
-                STATUS_LED = 0x03;
-                update_cpanel();
-                current_millis = millis();
-                break;
-
-                case 0x03:
-                STATUS_LED = 0x00;
-                update_cpanel();
-                current_millis = millis();
-                break;
-            }
-            Serial.println(F("<WAITING FOR HELPER>"));
-        }
-    check_on_off();
-    }
-    STATUS_LED = 0x02;
-    update_cpanel();
-    lcd.clear();
-    lcd.setCursor(3,0);
-    //Desync FIX
-    lcd.print(F("CONNECTING"));
-    delay(500);
-    return;
-}
-
 void get_serial() {;
     Serial.println(F("<WAITING>"));
-    check_on_off();
-    while(!newData) {recvWithStartEndMarkers();check_on_off();}
+    while(!newData) {recvWithStartEndMarkers();}
     showNewData();
-    delay(200);
     return;
 }
 
@@ -962,6 +965,9 @@ void EEPROM_UPDATE() {
 }
 
 void OK_tone() {
-    NewTone(BUZZER,583,100);
+    if(BUZZER_CFG) {if(BUZZER_ON) {NewTone(BUZZER,583,100);}}
     return;
 }
+
+// Restarts program from beginning but does not reset the peripherals and registers
+void soft_Reset() {asm volatile ("  jmp 0");  }
