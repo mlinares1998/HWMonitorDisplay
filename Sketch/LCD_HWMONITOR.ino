@@ -12,16 +12,16 @@ int D6 = 4;
 int D5 = 5;
 int LCD_BL = 6;
 int D4 = 7;
-int TEMP_HUMIDITY = 8;
-int LCD_RW = 9;
-int LCD_RS = 10;
+int TEMP_HUMIDITY = 10;
+int LCD_E = 8;
+int LCD_RS = 9;
 int LED_DATAPIN = 11;
 int LED_LATCHPIN = 12;
 int LED_CLOCKPIN = 13;
 int FWU_PIN = A0;
 
 //LCD Screen Init
-LiquidCrystal lcd(LCD_RS,LCD_RW,D4,D5,D6,D7); //4-bit Mode
+LiquidCrystal lcd(LCD_RS,LCD_E,D4,D5,D6,D7); //4-bit Mode
 
 //DHT11 Init
 dht DHT;
@@ -126,7 +126,7 @@ pinMode(D4,OUTPUT);
 pinMode(LCD_BL,OUTPUT);
 pinMode(TEMP_HUMIDITY,INPUT);
 pinMode(IR_DIODE,INPUT);
-pinMode(LCD_RW,OUTPUT);
+pinMode(LCD_E,OUTPUT);
 pinMode(LCD_RS,OUTPUT);
 pinMode(LED_DATAPIN,OUTPUT);
 pinMode(LED_LATCHPIN,OUTPUT);
@@ -135,14 +135,14 @@ pinMode(FWU_PIN, INPUT_PULLUP);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 lcd.begin(16,2); //LCD Start
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
-lcd.createChar(0,line0_0);
-lcd.createChar(1,line0_1);
-lcd.createChar(2,line0_2);
-lcd.createChar(3,line0_3);
-lcd.createChar(4,line1_0);
-lcd.createChar(5,line1_1);
-lcd.createChar(6,line1_2);
-lcd.createChar(7,line1_3);
+lcd.createChar(0,(uint8_t *)line0_0);
+lcd.createChar(1,(uint8_t *)line0_1);
+lcd.createChar(2,(uint8_t *)line0_2);
+lcd.createChar(3,(uint8_t *)line0_3);
+lcd.createChar(4,(uint8_t *)line1_0);
+lcd.createChar(5,(uint8_t *)line1_1);
+lcd.createChar(6,(uint8_t *)line1_2);
+lcd.createChar(7,(uint8_t *)line1_3);
 }
 
 
@@ -162,7 +162,7 @@ void standby() {
     //Serial OFF
     Serial.end();
     //Restore Original Chars (After Blink)
-    lcd.createChar(3,line0_3);
+    lcd.createChar(3,(uint8_t *)line0_3);
     IR_on_off = false;
     scroll_counter = 1;
     scroll_delay = 0;
@@ -205,11 +205,11 @@ void welcome() {
     current_millis = millis();
     while(millis() - current_millis <= 1000) {check_on_off();}
     current_millis = millis();
-    lcd.createChar(1,line0_1_ALT);
+    lcd.createChar(1,(uint8_t *)line0_1_ALT);
     CPU_LED = 0x02;
     update_cpanel();
     while(millis() - current_millis <= 350) {check_on_off();}
-    lcd.createChar(1,line0_1);
+    lcd.createChar(1,(uint8_t *)line0_1);
     current_millis = millis();
     while(millis() - current_millis <= 650) {check_on_off();}
     GPU_LED = 0x02;
@@ -548,13 +548,13 @@ void check_on_off() {
 void check_FWU() {if(digitalRead(FWU_PIN) == LOW) {lcd.clear();FWU_MODE();}}    
 
 void FWU_MODE() {
-    lcd.createChar(0,line0_0_FWU);
-    lcd.createChar(1,line0_1_FWU);
-    lcd.createChar(2,line0_2_FWU);
-    lcd.createChar(3,line0_3_FWU);
-    lcd.createChar(4,line0_4_FWU);
-    lcd.createChar(5,line1_0_FWU);
-    lcd.createChar(6,line1_1_FWU);
+    lcd.createChar(0,(uint8_t *)line0_0_FWU);
+    lcd.createChar(1,(uint8_t *)line0_1_FWU);
+    lcd.createChar(2,(uint8_t *)line0_2_FWU);
+    lcd.createChar(3,(uint8_t *)line0_3_FWU);
+    lcd.createChar(4,(uint8_t *)line0_4_FWU);
+    lcd.createChar(5,(uint8_t *)line1_0_FWU);
+    lcd.createChar(6,(uint8_t *)line1_1_FWU);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
