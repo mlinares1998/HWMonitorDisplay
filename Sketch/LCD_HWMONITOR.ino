@@ -4,17 +4,18 @@
 #include <dht.h>
 #include <IRremote.h>
 #include <EEPROM.h>
+#include <NewTone.h>
 
 //Pins
 const int PROGMEM IR_DIODE = 2;
-const int PROGMEM D7 = 3;
-const int PROGMEM D6 = 4;
-const int PROGMEM D5 = 5;
+const int PROGMEM LCD_D7 = 3;
+const int PROGMEM LCD_D6 = 4;
+const int PROGMEM LCD_D5 = 5;
 const int PROGMEM LCD_BL = 6;
-const int PROGMEM D4 = 7;
-const int PROGMEM TEMP_HUMIDITY = 8;
-const int PROGMEM LCD_RW = 9;
-const int PROGMEM LCD_RS = 10;
+const int PROGMEM LCD_D4 = 7;
+const int PROGMEM LCD_E = 8;
+const int PROGMEM LCD_RS = 9;
+const int PROGMEM BUZZER = 10;
 const int PROGMEM LED_DATAPIN = 11;
 const int PROGMEM LED_LATCHPIN = 12;
 const int PROGMEM LED_CLOCKPIN = 13;
@@ -23,9 +24,10 @@ const int PROGMEM PWR_PHYS = A1;
 const int PROGMEM CFG_PHYS = A2;
 const int PROGMEM OK_PHYS = A3;
 const int PROGMEM FORWARD_PHYS = A4;
+const int PROGMEM TEMP_HUMIDITY = A5;
 
 //LCD Screen Init
-LiquidCrystal lcd(LCD_RS,LCD_RW,D4,D5,D6,D7); //4-bit Mode
+LiquidCrystal lcd(LCD_RS,LCD_E,LCD_D4,LCD_D5,LCD_D6,LCD_D7); //4-bit Mode
 
 //DHT11 Init
 dht DHT;
@@ -62,10 +64,10 @@ volatile bool IR_8;
 volatile bool IR_9;
 
 //STATUS LEDS (0x00 = OFF, 0x01 = RED, 0x02 = GREEN, 0x03 = YELLOW)
-int STATUS_LED = 0x00;
-int CPU_LED = 0x00;
-int GPU_LED = 0x00;
-int RAM_LED = 0x00;
+int STATUS_LED;
+int CPU_LED;
+int GPU_LED;
+int RAM_LED;
 
 //Monitoring Variables
 int CPU_TEMP = 0;
@@ -113,40 +115,40 @@ bool FORWARDS_BUTTON = false;
 int selected_item = 1;
 
 //Version
-const char version[4] = "1.4";
+const char version[4] = "2.0";
 
 //Logo Chars Normal Mode
-const byte line0_0[] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
-const byte line0_1[] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
-const byte line0_1_ALT [] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
-const byte line0_2[] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
-const byte line0_3[] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
-const byte line1_0[] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
-const byte line1_1[] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
-const byte line1_2[] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
-const byte line1_3[] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
+const byte line0_0[][8] = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
+const byte line0_1[][8] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
+const byte line0_1_ALT [][8] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
+const byte line0_2[][8] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
+const byte line0_3[][8] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
+const byte line1_0[][8] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
+const byte line1_1[][8] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
+const byte line1_2[][8] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
+const byte line1_3[][8] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
 
 //Logo Chars FWU
-const byte line0_0_FWU[] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
-const byte line0_1_FWU[] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
-const byte line0_2_FWU[] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
-const byte line0_3_FWU[] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
-const byte line0_4_FWU[] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
-const byte line1_0_FWU[] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
-const byte line1_1_FWU[] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+const byte line0_0_FWU[][8] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
+const byte line0_1_FWU[][8] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
+const byte line0_2_FWU[][8] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
+const byte line0_3_FWU[][8] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
+const byte line0_4_FWU[][8] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
+const byte line1_0_FWU[][8] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
+const byte line1_1_FWU[][8] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
 //Setup
 void setup()
 {
 //Pins I/O
-pinMode(D7,OUTPUT);
-pinMode(D6,OUTPUT);
-pinMode(D5,OUTPUT);
-pinMode(D4,OUTPUT);
-pinMode(LCD_BL,OUTPUT);
-pinMode(TEMP_HUMIDITY,INPUT);
 pinMode(IR_DIODE,INPUT);
-pinMode(LCD_RW,OUTPUT);
+pinMode(LCD_D7,OUTPUT);
+pinMode(LCD_D6,OUTPUT);
+pinMode(LCD_D5,OUTPUT);
+pinMode(LCD_BL,OUTPUT);
+pinMode(LCD_D4,OUTPUT);
+pinMode(LCD_E,OUTPUT);
 pinMode(LCD_RS,OUTPUT);
+pinMode(BUZZER, OUTPUT);
 pinMode(LED_DATAPIN,OUTPUT);
 pinMode(LED_LATCHPIN,OUTPUT);
 pinMode(LED_CLOCKPIN,OUTPUT);
@@ -155,20 +157,19 @@ pinMode(PWR_PHYS, INPUT_PULLUP);
 pinMode(CFG_PHYS, INPUT_PULLUP);
 pinMode(OK_PHYS, INPUT_PULLUP);
 pinMode(FORWARD_PHYS, INPUT_PULLUP);
+pinMode(TEMP_HUMIDITY,INPUT);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
-lcd.begin(16,2); //LCD Start
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
-lcd.createChar(0,line0_0);
-lcd.createChar(1,line0_1);
-lcd.createChar(2,line0_2);
-lcd.createChar(3,line0_3);
-lcd.createChar(4,line1_0);
-lcd.createChar(5,line1_1);
-lcd.createChar(6,line1_2);
-lcd.createChar(7,line1_3);
+lcd.begin(16,2); //LCD Start
+lcd.createChar(0,(uint8_t *)line0_0);
+lcd.createChar(1,(uint8_t *)line0_1);
+lcd.createChar(2,(uint8_t *)line0_2);
+lcd.createChar(3,(uint8_t *)line0_3);
+lcd.createChar(4,(uint8_t *)line1_0);
+lcd.createChar(5,(uint8_t *)line1_1);
+lcd.createChar(6,(uint8_t *)line1_2);
+lcd.createChar(7,(uint8_t *)line1_3);
 }
-
-
 
 //Loop
 void loop() {
@@ -177,8 +178,6 @@ void loop() {
     wait_serial();
     monitor();
 }
-
-
 //Main Functions
 
 void standby() {
@@ -189,7 +188,7 @@ void standby() {
     //Serial OFF
     Serial.end();
     //Restore Original Chars (After Blink)
-    lcd.createChar(3,line0_3);
+    lcd.createChar(3,(uint8_t *)line0_3);
     IR_on_off = false;
     scroll_counter = 1;
     scroll_delay = 0;
@@ -232,11 +231,11 @@ void welcome() {
     current_millis = millis();
     while(millis() - current_millis <= 1000) {check_on_off();}
     current_millis = millis();
-    lcd.createChar(1,line0_1_ALT);
+    lcd.createChar(1,(uint8_t *)line0_1_ALT);
     CPU_LED = 0x02;
     update_cpanel();
     while(millis() - current_millis <= 350) {check_on_off();}
-    lcd.createChar(1,line0_1);
+    lcd.createChar(1,(uint8_t *)line0_1);
     current_millis = millis();
     while(millis() - current_millis <= 650) {check_on_off();}
     GPU_LED = 0x02;
@@ -462,7 +461,7 @@ void config_nosplash_buttons(bool clear) {
     if(FORWARDS_BUTTON) {selected_item++;if(selected_item > 2) {selected_item = 1;} config_nosplash_buttons(false);}
     else if(OK_BUTTON && selected_item == 1) {selected_item = 1; modes_select_buttons(true);}
     else if(OK_BUTTON && selected_item == 2) {selected_item = 1; brightness_select_buttons(true);}
-    else if(TEST_BUTTON) {TEST_BUTTON = false; lcd.clear(); monitor();}
+    else if(TEST_BUTTON) {TEST_BUTTON = false;lcd.clear(); monitor();}
     //Save values to EEPROM
     EEPROM_UPDATE();
     //Reset Variables
@@ -570,45 +569,45 @@ void check_IR() {
     else {
     switch(IR_RESULT.value) {
         //BUTTON 0
-        case 0xFF6897: IR_0 = true; break;
+        case 0xFF6897: IR_0 = true;OK_tone(); break;
         //BUTTON 1
-        case 0xFF30CF: IR_1 = true; break;
+        case 0xFF30CF: IR_1 = true;OK_tone(); break;
         //BUTTON 2 
-        case 0xFF18E7: IR_2 = true; break;
+        case 0xFF18E7: IR_2 = true;OK_tone(); break;
         //BUTTON 3
-        case 0xFF7A85: IR_3 = true; break;
+        case 0xFF7A85: IR_3 = true;OK_tone(); break;
         //BUTTON 4
-        case 0xFF10EF: IR_4 = true; break;
+        case 0xFF10EF: IR_4 = true;OK_tone(); break;
         //BUTTON 5
-        case 0xFF38C7: IR_5 = true; break;
+        case 0xFF38C7: IR_5 = true;OK_tone(); break;
         //BUTTON 6
-        case 0xFF5AA5: IR_6 = true; break;
+        case 0xFF5AA5: IR_6 = true;OK_tone(); break;
         //BUTTON 7
-        case 0xFF42BD: IR_7 = true; break;
+        case 0xFF42BD: IR_7 = true;OK_tone(); break;
         //BUTTON 8
-        case 0xFF4AB5: IR_8 = true; break;
+        case 0xFF4AB5: IR_8 = true;OK_tone(); break;
         //BUTTON 9
-        case 0xFF52AD: IR_9 = true; break;
+        case 0xFF52AD: IR_9 = true;OK_tone(); break;
         //PWR BUTTON
-        case 0xFFA25D: IR_on_off = !IR_on_off; break;
+        case 0xFFA25D: IR_on_off = !IR_on_off;OK_tone(); break;
         //MENU BUTTON
-        case 0xFFE21D: IR_menu = true; break;
+        case 0xFFE21D: IR_menu = true;OK_tone(); break;
         //TEST BUTTON
-        case 0xFF22DD: IR_test = true; break;
+        case 0xFF22DD: IR_test = true;OK_tone(); break;
         //RETURN BUTTON 
-        case 0xFFC23D: IR_back = true; break;
+        case 0xFFC23D: IR_back = true;OK_tone(); break;
         //PLUS BUTTON 
-        case 0xFF02FD: IR_plus = true; break;
+        case 0xFF02FD: IR_plus = true;OK_tone(); break;
         //MINUS BUTTON 
-        case 0xFF9867: IR_minus = true; break;
+        case 0xFF9867: IR_minus = true;OK_tone(); break;
         //NEXT BUTTON 
-        case 0xFF906F: IR_forwards = true; break;
+        case 0xFF906F: IR_forwards = true;OK_tone(); break;
         //BACK BUTTON
-        case 0xFFE01F: IR_backwards = true; break;
+        case 0xFFE01F: IR_backwards = true;OK_tone(); break;
         //PLAY BUTTON 
-        case 0xFFA857: IR_play = !IR_play; break;
+        case 0xFFA857: IR_play = !IR_play;OK_tone(); break;
         //CLEAR BUTTON
-        case 0xFFB04F: IR_clear = true; break;
+        case 0xFFB04F: IR_clear = true;OK_tone(); break;
     }
     //Clear IR Receive variable value (Avoid infinite loop)
     IR_RESULT.value = 0x000000;
@@ -619,10 +618,11 @@ void check_IR() {
 
 void wait_to_refresh() {
     //Pause if IR Play is pushed (MODE 2)
-    if(MODE == 2 && (!IR_play || !OK_BUTTON)) {
+    if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
         scroll_delay++;
         if(scroll_delay == 10) {scroll_counter++;scroll_delay = 0;lcd.clear();}
     }
+
     //Manual Control (MODE 3)
     else if(MODE == 3 && (IR_backwards || IR_forwards || FORWARDS_BUTTON)) {
         if (IR_backwards) {scroll_counter--;IR_backwards = false;lcd.clear();}
@@ -671,24 +671,26 @@ void getsensors() {
         array_table[++i] = strtok(NULL,",");
     }
     for(int i = 0; array_table[i] != NULL; i +=2) {
-        if(String(array_table[i]) == "UR") {RAM_USED = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "FR") {RAM_FREE = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "CC") {CPU_CLK = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "CU") {CPU_USAGE = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "CT") {CPU_TEMP = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "CV") {CPU_VCORE = String(array_table[i+1]).toFloat();}
-        else if(String(array_table[i]) == "GV") {GPU_VCORE = String(array_table[i+1]).toFloat();}
-        else if(String(array_table[i]) == "GT") {GPU_TEMP = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "GC") {GPU_CLK = String(array_table[i+1]).toInt();}
-        else if(String(array_table[i]) == "FP") {GPU_FPS = String(array_table[i+1]).toInt();}
+        if(String(array_table[i]) == ("UR")) {RAM_USED = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("FR")) {RAM_FREE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("CC")) {CPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("CU")) {CPU_USAGE = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("CT")) {CPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("CV")) {CPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == ("GV")) {GPU_VCORE = String(array_table[i+1]).toFloat();}
+        else if(String(array_table[i]) == ("GT")) {GPU_TEMP = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("GC")) {GPU_CLK = String(array_table[i+1]).toInt();}
+        else if(String(array_table[i]) == ("FP")) {GPU_FPS = String(array_table[i+1]).toInt();}
     }
     return;
 }
 
 //Check if Power button is pressed, ON -> OFF, OFF -> ON
 void check_on_off() {
+    if(IR_on_off == false) {loop();}
     check_BUTTONS();
-    if(IR_on_off == false) {loop();}}
+    return;
+}
 
 void check_BUTTONS() {
     //Down Flank Detection
@@ -697,23 +699,23 @@ void check_BUTTONS() {
     CFG_PUSH = digitalRead(CFG_PHYS);
     OK_PUSH = digitalRead(OK_PHYS);
     FORWARDS_PUSH = digitalRead(FORWARD_PHYS);
-    if(PWR_PUSH == LOW && PWR_PUSH_OLD == HIGH) {IR_on_off = !IR_on_off;}
-    else if(CFG_PUSH == LOW && CFG_PUSH_OLD == HIGH) {TEST_BUTTON = true;}
-    else if(OK_PUSH == LOW && OK_PUSH_OLD == HIGH) {OK_BUTTON = !OK_BUTTON;}
-    else if(FORWARDS_PUSH == LOW && FORWARDS_PUSH_OLD == HIGH) {FORWARDS_BUTTON = true;}
+    if(PWR_PUSH == LOW && PWR_PUSH_OLD == HIGH) {OK_tone();IR_on_off = !IR_on_off;}
+    else if(CFG_PUSH == LOW && CFG_PUSH_OLD == HIGH) {OK_tone();TEST_BUTTON = true;}
+    else if(OK_PUSH == LOW && OK_PUSH_OLD == HIGH) {OK_tone();OK_BUTTON = !OK_BUTTON;}
+    else if(FORWARDS_PUSH == LOW && FORWARDS_PUSH_OLD == HIGH) {OK_tone();FORWARDS_BUTTON = true;}
     PWR_PUSH_OLD = PWR_PUSH;
     CFG_PUSH_OLD = CFG_PUSH;
     OK_PUSH_OLD = OK_PUSH;
     FORWARDS_PUSH_OLD = FORWARDS_PUSH;
     }
 void FWU_MODE() {
-    lcd.createChar(0,line0_0_FWU);
-    lcd.createChar(1,line0_1_FWU);
-    lcd.createChar(2,line0_2_FWU);
-    lcd.createChar(3,line0_3_FWU);
-    lcd.createChar(4,line0_4_FWU);
-    lcd.createChar(5,line1_0_FWU);
-    lcd.createChar(6,line1_1_FWU);
+    lcd.createChar(0,(uint8_t *)line0_0_FWU);
+    lcd.createChar(1,(uint8_t *)line0_1_FWU);
+    lcd.createChar(2,(uint8_t *)line0_2_FWU);
+    lcd.createChar(3,(uint8_t *)line0_3_FWU);
+    lcd.createChar(4,(uint8_t *)line0_4_FWU);
+    lcd.createChar(5,(uint8_t *)line1_0_FWU);
+    lcd.createChar(6,(uint8_t *)line1_1_FWU);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
@@ -749,6 +751,7 @@ void FWU_MODE() {
                 GPU_LED = 0x03;
                 RAM_LED = 0x03;
                 update_cpanel();
+                NewTone(BUZZER,3800,500);
                 current_millis = millis();
                 break;
 
@@ -758,6 +761,7 @@ void FWU_MODE() {
                 GPU_LED = 0x00;
                 RAM_LED = 0x00;
                 update_cpanel();
+                NewTone(BUZZER,3800,500);
                 current_millis = millis();
                 break;
             }
@@ -955,4 +959,9 @@ void EEPROM_UPDATE() {
     OLD_BL_BRIGHTNESS = BL_BRIGHTNESS;
     lcd.clear();
     return;    
+}
+
+void OK_tone() {
+    NewTone(BUZZER,583,100);
+    return;
 }
