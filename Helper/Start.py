@@ -59,6 +59,7 @@ def killprograms(start):
 def SendJSON():
     global ip
     global port
+    global arduino
     send_data = ""
     try:
         with urllib.request.urlopen("http://" + str(ip) + ":" + str(port)) as url:
@@ -104,10 +105,12 @@ def SendJSON():
     except ConnectionRefusedError:
         print("Overhead, RETRY")
         time.sleep(1)
+        arduino.close()
         killprograms(True)
         launchprogrmans()
         SendJSON()
     except KeyboardInterrupt:
+        arduino.close()
         killprograms(False)
         
     except serial.SerialException:
@@ -115,6 +118,7 @@ def SendJSON():
     except urllib.error.HTTPError:
         print("Overhead, RETRY")
         time.sleep(1)
+        arduino.close()
         killprograms(True)
         launchprogrmans()
         SendJSON()

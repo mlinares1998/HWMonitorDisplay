@@ -113,6 +113,7 @@ const static byte PROGMEM numChars = 255;
 char receivedChars[numChars];
 boolean newData = false;
 unsigned long timeoutcounter = 0;
+bool timeoutOK;
 
 //LCD Lines Arrays
 char line0[17];
@@ -289,13 +290,15 @@ void wait_serial() {
     lcd.setCursor(3,0);
     //Desync FIX
     lcd.print(F("CONNECTED"));
-    delay(500);
+    current_millis = millis();
+    while(millis() - current_millis <= 500) {check_on_off();}
     //Reset Buttons and Delays
     OK_BUTTON = false;
     FORWARDS_BUTTON = false;
     scroll_counter = 1;
     scroll_delay = 0;
     timeoutcounter = 0;
+    timeoutOK = false;
     return;
 }
 
@@ -305,6 +308,8 @@ void monitor() {
         IR_test = false;
         TEST_BUTTON = false;
         wait_to_refresh();
+        //if timeout is reached
+        if(timeoutOK) {lcd.clear();timeout(); wait_serial();}
         //Enter selected mode
         if(MODE == 1) {
             lcd.setCursor(0,0);
@@ -608,43 +613,48 @@ void check_IR() {
 void wait_to_refresh() {
     //Receives Data from PC
     get_serial();
-    //Wait 500ms until refresh
-    current_millis = millis();
-    while (millis() - current_millis <= 500) {check_on_off();}
-    //If settings button is pushed, go to settings
-    if(IR_test || TEST_BUTTON) {config();}
-    //Pause if IR Play is pushed (MODE 2)
-    else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
-        scroll_delay++;
-        //Change Page every 2s
-        if(scroll_delay == 4) {scroll_counter++;scroll_delay = 0;lcd.clear();}
-    }
+    //If timeout isn't reached
+    if(!timeoutOK) {
+        //Wait 500ms until refresh
+        current_millis = millis();
+        while (millis() - current_millis <= 500) {check_on_off();}
+        //If settings button is pushed, go to settings
+        if(IR_test || TEST_BUTTON) {config();}
+        //Pause if IR Play is pushed (MODE 2)
+        else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
+            scroll_delay++;
+            //Change Page every 2s
+            if(scroll_delay == 4) {scroll_counter++;scroll_delay = 0;lcd.clear();}
+        }
 
-    //Manual Control (MODE 3)
-    else if(MODE == 3 && (IR_backwards || IR_forwards || FORWARDS_BUTTON)) {
-        //Change Page if Forwards or Backwards buttons are pushed.
-        if (IR_backwards) {scroll_counter--;IR_backwards = false;lcd.clear();}
-        if (IR_forwards || FORWARDS_BUTTON) {scroll_counter++;IR_forwards = false; FORWARDS_BUTTON = false;lcd.clear();}
+        //Manual Control (MODE 3)
+        else if(MODE == 3 && (IR_backwards || IR_forwards || FORWARDS_BUTTON)) {
+            //Change Page if Forwards or Backwards buttons are pushed.
+            if (IR_backwards) {scroll_counter--;IR_backwards = false;lcd.clear();}
+            if (IR_forwards || FORWARDS_BUTTON) {scroll_counter++;IR_forwards = false; FORWARDS_BUTTON = false;lcd.clear();}
+        }
+        //Back to Start/End
+        if(scroll_counter == 6) {scroll_counter = 1;lcd.clear();}
+        else if(scroll_counter == 0) {scroll_counter = 5;lcd.clear();}
+        //Get sensors data
+        getsensors();
+        //LED Updating
+        if(CPU_TEMP < 60) {CPU_LED = 0x02;}
+        else if((CPU_TEMP >= 60) && (CPU_TEMP < 80)) {CPU_LED = 0x03;}
+        else if(CPU_TEMP >= 80) {CPU_LED = 0x01;}
+        if(GPU_TEMP < 60) {GPU_LED = 0x02;}
+        else if((GPU_TEMP >= 60) && (GPU_TEMP < 80)) {GPU_LED = 0x03;}
+        else if(GPU_TEMP >= 80) {GPU_LED = 0x01;}
+        if(RAM_FREE >= 2000) {RAM_LED = 0x02;}
+        else if((RAM_FREE >= 1000) && (RAM_FREE < 1999)) {RAM_LED = 0x03;}
+        else if(RAM_FREE < 999) {RAM_LED = 0x01;}
+        update_cpanel();
+        //Increase DHT Delay Counter
+        DHT_Counter++;
+        return;
     }
-    //Back to Start/End
-    if(scroll_counter == 6) {scroll_counter = 1;lcd.clear();}
-    else if(scroll_counter == 0) {scroll_counter = 5;lcd.clear();}
-    //Get sensors data
-    getsensors();
-    //LED Updating
-    if(CPU_TEMP < 60) {CPU_LED = 0x02;}
-    else if((CPU_TEMP >= 60) && (CPU_TEMP < 80)) {CPU_LED = 0x03;}
-    else if(CPU_TEMP >= 80) {CPU_LED = 0x01;}
-    if(GPU_TEMP < 60) {GPU_LED = 0x02;}
-    else if((GPU_TEMP >= 60) && (GPU_TEMP < 80)) {GPU_LED = 0x03;}
-    else if(GPU_TEMP >= 80) {GPU_LED = 0x01;}
-    if(RAM_FREE >= 2000) {RAM_LED = 0x02;}
-    else if((RAM_FREE >= 1000) && (RAM_FREE < 1999)) {RAM_LED = 0x03;}
-    else if(RAM_FREE < 999) {RAM_LED = 0x01;}
-    update_cpanel();
-    //Increase DHT Delay Counter
-    DHT_Counter++;
-    return;
+    //If timeout is reached
+    else {return;}
 }
 
 //Reads Sensors and Parse Downloaded Data
@@ -769,7 +779,8 @@ void update_cpanel() {
 //Receives data from PC
 void get_serial() {;
     Serial.println(F("<WAITING>"));
-    while(!newData) {recvWithStartEndMarkers();}
+    //Read data until char is fully received or timeout
+    while(!newData && !timeoutOK) {recvWithStartEndMarkers();}
     showNewData();
     return;
 }
@@ -781,10 +792,11 @@ void recvWithStartEndMarkers() {
     char endMarker = '>';
     char rc;
     //Increase Timeout if Serial fails
-    while (Serial.available() == 0) {
-        if(timeoutcounter == 1000000) {lcd.clear();timeout();}
-        timeoutcounter++;}
+    if(Serial.available() == 0) {timeoutcounter++;}
+    //Activate TimeoutOK bool
+    if(timeoutcounter == 500000) {timeoutOK = true;}
     while (Serial.available() > 0 && newData == false) {
+        timeoutOK = false;
         timeoutcounter = 0;
         rc = Serial.read();
         if (recvInProgress == true) {
@@ -815,6 +827,8 @@ void showNewData() {if (newData == true) {newData = false;}}
 
 //Timeout if Serial Connection Interrupts
 void timeout() {
+    //Close Serial Port
+    Serial.end();
     int counter = 5;
     STATUS_LED = 0x01;
     CPU_LED = 0x01;
@@ -853,8 +867,7 @@ void timeout() {
             }
         }
     }
-    wait_serial();
-    monitor();
+    return;
 }
 
 //Read Config stored in EEPROM
