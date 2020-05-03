@@ -7,36 +7,31 @@ CREDITS
 //************************************ Init *****************************************//
 //Libs
 #include <EEPROM.h>
-//NewLiquidCrystal from Francisco Malpartida https://bitbucket.org/fmalpartida/
-#include "src\NewLiquidCrystal\LiquidCrystal.h"
-//Forked DHT11 Library by Rob Tillaart https://github.com/RobTillaart/ 
-#include "src\DHT11-Library\dht.h"
-//IRremote Library by Rafi Khan https://github.com/z3t0
-#include "src\Arduino-IRremote\src\IRremote.h"
-//NewTone Library by Tim Eckel https://bitbucket.org/teckel12/
-#include "src\arduino-new-tone\NewTone.h"
-//Bounce2 Library by Thomas O Fredericks https://github.com/thomasfredericks
-#include "src\Bounce2\src\Bounce2.h"
+#include "src\NewLiquidCrystal\LiquidCrystal.h" //NewLiquidCrystal from Francisco Malpartida https://bitbucket.org/fmalpartida/
+#include "src\DHT11-Library\dht.h" //DHT11 Library by Rob Tillaart https://github.com/RobTillaart/ 
+#include "src\Arduino-IRremote\src\IRremote.h" //IRremote Library by Rafi Khan https://github.com/z3t0
+#include "src\arduino-new-tone\NewTone.h" //NewTone Library by Tim Eckel https://bitbucket.org/teckel12/
+#include "src\Bounce2\src\Bounce2.h" //Bounce2 Library by Thomas O Fredericks https://github.com/thomasfredericks
 
 //Define Pins
-const int PROGMEM IR_DIODE = 2;
-const int PROGMEM LCD_D7 = 3;
-const int PROGMEM LCD_D6 = 4;
-const int PROGMEM LCD_D5 = 5;
-const int PROGMEM LCD_BL = 6;
-const int PROGMEM LCD_D4 = 7;
-const int PROGMEM LCD_E = 8;
-const int PROGMEM LCD_RS = 9;
-const int PROGMEM BUZZER = 10;
-const int PROGMEM LED_DATAPIN = 11;
-const int PROGMEM LED_LATCHPIN = 12;
-const int PROGMEM LED_CLOCKPIN = 13;
-const int PROGMEM FWU_PIN = A0;
-const int PROGMEM PWR_PHYS = A1;
-const int PROGMEM CFG_PHYS = A2;
-const int PROGMEM OK_PHYS = A3;
-const int PROGMEM FORWARDS_PHYS = A4;
-const int PROGMEM TEMP_HUMIDITY = A5;
+const byte IR_DIODE = 2;
+const byte LCD_D7 = 3;
+const byte LCD_D6 = 4;
+const byte LCD_D5 = 5;
+const byte LCD_BL = 6;
+const byte LCD_D4 = 7;
+const byte LCD_E = 8;
+const byte LCD_RS = 9;
+const byte BUZZER = 10;
+const byte LED_DATAPIN = 11;
+const byte LED_LATCHPIN = 12;
+const byte LED_CLOCKPIN = 13;
+const byte FWU_PIN = A0;
+const byte PWR_PHYS = A1;
+const byte CFG_PHYS = A2;
+const byte OK_PHYS = A3;
+const byte FORWARDS_PHYS = A4;
+const byte TEMP_HUMIDITY = A5;
 
 //LCD Screen Init
 LiquidCrystal lcd(LCD_RS,LCD_E,LCD_D4,LCD_D5,LCD_D6,LCD_D7); //4-bit Mode
@@ -72,8 +67,8 @@ volatile bool IR_9;
 volatile bool IR_ACTIVE;
 
 //Config Variables
-int BL_BRIGHTNESS; //Brightness value (0-250)
-int OLD_BL_BRIGHTNESS; //Brightness Rollback if settings are not applied
+byte BL_BRIGHTNESS; //Brightness value (0-250)
+byte OLD_BL_BRIGHTNESS; //Brightness Rollback if settings are not applied
 bool BUZZER_CFG = true; //BUZZER Setting Read from EEPROM
 bool BUZZER_ON; //Enable / Disable BUZZER
 
@@ -84,35 +79,34 @@ byte GPU_LED;
 byte RAM_LED;
 
 //Monitoring Variables
-uint8_t CPU_TEMP = 0;
+byte CPU_TEMP = 0;
 int CPU_FAN = 0;
 int CPU_CLK = 0;
-uint8_t CPU_USAGE = 0;
+byte CPU_USAGE = 0;
 float CPU_VCORE = 0;
-uint8_t GPU_TEMP = 0;
+byte GPU_TEMP = 0;
 int GPU_CLK = 0;
 int GPU_FAN = 0;
 int GPU_FPS = 0;
 float GPU_VCORE = 0;
 unsigned long RAM_USED = 0;
 unsigned long RAM_FREE = 0;
-uint8_t ROOM_TEMP = 0;
-uint8_t ROOM_HUMIDITY = 0;
+byte ROOM_TEMP = 0;
+byte ROOM_HUMIDITY = 0;
 
 //Selected Mode and Page tracking
-uint8_t MODE;
-uint8_t scroll_counter = 1;
-uint8_t scroll_delay = 0;
+byte MODE;
+byte scroll_counter;
+byte scroll_delay;
 unsigned long current_millis; //To wait without using delay()
 
 //DHT11 Reading Delay
-uint8_t DHT_Counter;
+byte DHT_Counter;
 
 //Serial Monitoring
 const static byte PROGMEM numChars = 255;
 char receivedChars[numChars];
 boolean newData = false;
-unsigned long timeoutcounter = 0;
 bool timeoutOK;
 
 //LCD Lines Arrays
@@ -130,7 +124,7 @@ Bounce debouncerFORWARDS = Bounce();
 bool TEST_BUTTON = false;
 bool OK_BUTTON = false;
 bool FORWARDS_BUTTON = false;
-uint8_t selected_item;
+byte selected_item;
 bool CFG_USING_BUTTONS;
 
 //Version
@@ -157,11 +151,11 @@ debouncerPWR.attach(PWR_PHYS,INPUT_PULLUP);
 debouncerCFG.attach(CFG_PHYS,INPUT_PULLUP);
 debouncerOK.attach(OK_PHYS,INPUT_PULLUP);
 debouncerFORWARDS.attach(FORWARDS_PHYS,INPUT_PULLUP);
+pinMode(TEMP_HUMIDITY,INPUT);
 debouncerPWR.interval(25);
 debouncerCFG.interval(25);
 debouncerOK.interval(25);
 debouncerFORWARDS.interval(25);
-pinMode(TEMP_HUMIDITY,INPUT);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
 lcd.begin(16,2); //LCD Start
@@ -209,7 +203,6 @@ void welcome() {
     //LCD Startup
     analogWrite(LCD_BL, BL_BRIGHTNESS);
     //Welcome Message
-    lcd.clear();
     lcd.setCursor(6,0);
     lcd.write(byte(0));
     lcd.write(byte(1));
@@ -226,24 +219,19 @@ void welcome() {
     //Leds GREEN Progressively
     STATUS_LED = 0x02;
     update_cpanel();
-    current_millis = millis();
-    while(millis() - current_millis <= 1000) {check_on_off();}
-    current_millis = millis();
+    NBDelay(1000);
     CHARLOAD(2);
     CPU_LED = 0x02;
     update_cpanel();
-    while(millis() - current_millis <= 350) {check_on_off();}
+    NBDelay(350);
     CHARLOAD(1);
-    current_millis = millis();
-    while(millis() - current_millis <= 650) {check_on_off();}
+    NBDelay(650);
     GPU_LED = 0x02;
     update_cpanel();
-    current_millis = millis();
-    while(millis() - current_millis <= 1000) {check_on_off();}
+    NBDelay(1000);
     RAM_LED = 0x02;
     update_cpanel();
-    current_millis = millis();
-    while(millis() - current_millis <= 1000) {check_on_off();}
+    NBDelay(1000);
     lcd.clear();
     return;
 }
@@ -269,19 +257,17 @@ void wait_serial() {
             switch (STATUS_LED) {
                 case 0x00:
                 STATUS_LED = 0x03;
-                update_cpanel();
-                current_millis = millis();
                 break;
 
                 case 0x03:
                 STATUS_LED = 0x00;
-                update_cpanel();
-                current_millis = millis();
                 break;
             }
+            update_cpanel();
+            current_millis = millis();
             Serial.println(F("<WAITING FOR HELPER>"));
         }
-    check_on_off();
+        check_on_off();
     }
     //STATUS LED = GREEN
     STATUS_LED = 0x02;
@@ -290,26 +276,24 @@ void wait_serial() {
     lcd.setCursor(3,0);
     //Desync FIX
     lcd.print(F("CONNECTED"));
-    current_millis = millis();
-    while(millis() - current_millis <= 500) {check_on_off();}
+    NBDelay(500);
     //Reset Buttons and Delays
     OK_BUTTON = false;
     FORWARDS_BUTTON = false;
     scroll_counter = 1;
     scroll_delay = 0;
-    timeoutcounter = 0;
     timeoutOK = false;
     return;
 }
 
 void monitor() {
     while(true) {
+        //Check if timneout is reached
+        if(timeoutOK) {lcd.clear();timeout(); wait_serial();}
         //Clear IR button values
         IR_test = false;
         TEST_BUTTON = false;
         wait_to_refresh();
-        //if timeout is reached
-        if(timeoutOK) {lcd.clear();timeout(); wait_serial();}
         //Enter selected mode
         if(MODE == 1) {
             lcd.setCursor(0,0);
@@ -387,11 +371,13 @@ void config() {
     lcd.clear();
     lcd.setCursor(4,0);
     lcd.print(F("SETTINGS"));
-    current_millis = millis();
-    while(millis() - current_millis <= 2000) {check_on_off();}
+    NBDelay(2000);
     selected_item = 1;
-    if(IR_test) {CFG_USING_BUTTONS = false; selected_item = 1; config_nosplash(true);}
-    else if(TEST_BUTTON) {CFG_USING_BUTTONS = true; selected_item = 1; config_nosplash(true);}
+    if(IR_test) {CFG_USING_BUTTONS = false;}
+    else if(TEST_BUTTON) {CFG_USING_BUTTONS = true;}
+    selected_item = 1; 
+    config_nosplash(true);
+    return;
 }
 
 void config_nosplash(bool clear) {
@@ -560,9 +546,9 @@ void brightness_select(bool clear) {
 void check_IR() {
     if(IRRECEIVE.decode(&IR_RESULT) == false) {} //No button pressed 
     else {
-    switch(IR_RESULT.value) {
+        switch(IR_RESULT.value) {
         //BUTTON 0
-        case 0xFF6897: IR_0 = true;OK_tone(); IR_ACTIVE = true; break;
+        case 0xFF6897: IR_0 = true;OK_tone(); IR_ACTIVE = true;break;
         //BUTTON 1
         case 0xFF30CF: IR_1 = true;OK_tone(); IR_ACTIVE = true;break;
         //BUTTON 2 
@@ -616,8 +602,7 @@ void wait_to_refresh() {
     //If timeout isn't reached
     if(!timeoutOK) {
         //Wait 500ms until refresh
-        current_millis = millis();
-        while (millis() - current_millis <= 500) {check_on_off();}
+        NBDelay(500);
         //If settings button is pushed, go to settings
         if(IR_test || TEST_BUTTON) {config();}
         //Pause if IR Play is pushed (MODE 2)
@@ -780,6 +765,7 @@ void update_cpanel() {
 void get_serial() {;
     Serial.println(F("<WAITING>"));
     //Read data until char is fully received or timeout
+    current_millis = millis();
     while(!newData && !timeoutOK) {recvWithStartEndMarkers();}
     showNewData();
     return;
@@ -792,12 +778,13 @@ void recvWithStartEndMarkers() {
     char endMarker = '>';
     char rc;
     //Increase Timeout if Serial fails
-    if(Serial.available() == 0) {timeoutcounter++;}
-    //Activate TimeoutOK bool
-    if(timeoutcounter == 500000) {timeoutOK = true;}
+    if(Serial.available() == 0) {
+        //Activate TimeoutOK bool
+        if(millis() - current_millis == 2000) {timeoutOK = true;}
+    }
     while (Serial.available() > 0 && newData == false) {
         timeoutOK = false;
-        timeoutcounter = 0;
+        current_millis = millis();
         rc = Serial.read();
         if (recvInProgress == true) {
             if (rc != endMarker) {
@@ -850,9 +837,6 @@ void timeout() {
                 CPU_LED = 0x01;
                 GPU_LED = 0x01;
                 RAM_LED = 0x01;
-                update_cpanel();
-                current_millis = millis();
-                counter--;
                 break;
 
                 case 0x01:
@@ -860,11 +844,11 @@ void timeout() {
                 CPU_LED = 0x00;
                 GPU_LED = 0x00;
                 RAM_LED = 0x00;
-                update_cpanel();
-                current_millis = millis();
-                counter--;
                 break;
             }
+        update_cpanel();
+        current_millis = millis();
+        counter--;
         }
     }
     return;
@@ -877,12 +861,6 @@ void EEPROM_READ() {
     OLD_BL_BRIGHTNESS = BL_BRIGHTNESS;
     //Mode is stored in Index 1
     MODE = EEPROM.read(1);
-    EEPROM_CHECK();
-    return;    
-}  
-
-//Check if EEPROM CFG is valid
-void EEPROM_CHECK() {
     //Checking if values are valid, if not rolling back to defaults
     if((BL_BRIGHTNESS == 0 || BL_BRIGHTNESS % 25 != 0) || (MODE < 1 || MODE > 3)) {
         BL_BRIGHTNESS = 250;
@@ -912,12 +890,12 @@ void EEPROM_UPDATE() {
 
 //Plays a Tone when a button is pressed
 void OK_tone() {
-    if(BUZZER_CFG) {if(BUZZER_ON) {NewTone(BUZZER,583,100);}}
+    if(BUZZER_CFG && BUZZER_ON) {NewTone(BUZZER,583,100);}
     return;
 }
 
 // Restarts program from beginning but does not reset the peripherals and registers
-void soft_Reset() {asm volatile ("  jmp 0");  }
+void soft_Reset() {asm volatile ("  jmp 0");}
 
 //LOAD CUSTOM LOGOS FROM FLASH TO RAM
 void CHARLOAD(int mode) {
@@ -998,3 +976,8 @@ void CHARLOAD(int mode) {
             break;
         }
 }
+//Checks On-Off buttons while waiting.
+void NBDelay(int time) {
+    current_millis = millis(); 
+    while (millis() - current_millis <= time) {check_on_off();}
+    }
