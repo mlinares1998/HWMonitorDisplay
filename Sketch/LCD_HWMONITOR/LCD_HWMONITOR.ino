@@ -29,8 +29,8 @@ const byte LED_CLOCKPIN = 13;
 const byte FWU_PIN = A0;
 const byte PWR_PHYS = A1;
 const byte CFG_PHYS = A2;
-const byte OK_PHYS = A3;
-const byte FORWARDS_PHYS = A4;
+const byte FORWARDS_PHYS = A3;
+const byte OK_PHYS = A4;
 const byte TEMP_HUMIDITY = A5;
 
 //LCD Screen Init
@@ -44,6 +44,7 @@ IRrecv IRRECEIVE(IR_DIODE);
 decode_results IR_RESULT;
 
 //IR Remote buttons
+volatile bool IR_ACTIVE;
 volatile bool IR_on_off;
 volatile bool IR_menu;
 volatile bool IR_test;
@@ -64,7 +65,6 @@ volatile bool IR_6;
 volatile bool IR_7;
 volatile bool IR_8;
 volatile bool IR_9;
-volatile bool IR_ACTIVE;
 
 //Config Variables
 byte BL_BRIGHTNESS; //Brightness value (0-250)
@@ -361,7 +361,8 @@ void monitor() {
 }
 
 //Settings Menu
-void config() {
+void config(bool splash) {
+    if(splash) {
     //Disable CPU and GPU LEDS
     CPU_LED = 0x00;
     GPU_LED = 0x00;
@@ -376,13 +377,10 @@ void config() {
     if(IR_test) {CFG_USING_BUTTONS = false;}
     else if(TEST_BUTTON) {CFG_USING_BUTTONS = true;}
     selected_item = 1; 
-    config_nosplash(true);
-    return;
-}
-
-void config_nosplash(bool clear) {
+    lcd.clear();
+    }
+    else{lcd.clear();}
     while(true) {
-        if(clear) {lcd.clear();}
         //Selection menu
         if (!CFG_USING_BUTTONS) {
             lcd.print(F("(1) MONITOR MODE"));
@@ -414,13 +412,12 @@ void config_nosplash(bool clear) {
         while(!IR_ACTIVE && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
         if(IR_1 && !CFG_USING_BUTTONS) {selected_item = 1; modes_select(true);break;}
         else if(IR_2 && !CFG_USING_BUTTONS) {brightness_select(true);break;}
-        else if(IR_back && !CFG_USING_BUTTONS) {lcd.clear();break;}
         else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 2) {selected_item = 1;}}
         else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {selected_item = 1; modes_select(true);break;}
         else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {brightness_select(true);break;}
-        else if(TEST_BUTTON && CFG_USING_BUTTONS) {lcd.clear();break;}
-        else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false; clear = true;}
-        else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1; clear = true;}
+        else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {lcd.clear();break;}
+        else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false;lcd.clear();}
+        else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1;lcd.clear();}
     }
         //Save values to EEPROM
         EEPROM_UPDATE();
@@ -480,12 +477,10 @@ void modes_select(bool clear) {
         if(IR_1 && !CFG_USING_BUTTONS) {MODE = 1;break;}
         else if(IR_2 && !CFG_USING_BUTTONS) {MODE = 2;break;}
         else if(IR_3 && !CFG_USING_BUTTONS) {MODE = 3;break;}
-        else if(IR_back && !CFG_USING_BUTTONS) {selected_item = 1; config_nosplash(true);}
         else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 3) {selected_item = 1;} clear = false;}
         else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {MODE = 1;break;}
         else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {MODE = 2;break;}
         else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 3) {MODE = 3;break;}
-        else if(TEST_BUTTON && CFG_USING_BUTTONS) {selected_item = 1; config_nosplash(true);}
         else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false; clear = true;}
         else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1; clear = true;}
     }
@@ -530,11 +525,9 @@ void brightness_select(bool clear) {
         if(FORWARDS_BUTTON && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
         else if(FORWARDS_BUTTON && current_bl == 10) {BL_BRIGHTNESS = 25;analogWrite(LCD_BL,BL_BRIGHTNESS); clear = true;}
         else if(OK_BUTTON){return;}
-        else if(TEST_BUTTON) {analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); BL_BRIGHTNESS = OLD_BL_BRIGHTNESS;selected_item = 1;CFG_USING_BUTTONS = true; config_nosplash(true);}
         else if(IR_forwards && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
         else if(IR_backwards && current_bl > 1) {BL_BRIGHTNESS -= 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
         else if(IR_play){break;}
-        else if(IR_back) {analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); BL_BRIGHTNESS = OLD_BL_BRIGHTNESS; selected_item = 1;CFG_USING_BUTTONS = false; config_nosplash(true);}
         else {}
     }
     return;
@@ -604,7 +597,7 @@ void wait_to_refresh() {
         //Wait 500ms until refresh
         NBDelay(500);
         //If settings button is pushed, go to settings
-        if(IR_test || TEST_BUTTON) {config();}
+        if(IR_test || TEST_BUTTON) {config(true);}
         //Pause if IR Play is pushed (MODE 2)
         else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
             scroll_delay++;
