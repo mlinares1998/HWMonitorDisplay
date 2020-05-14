@@ -128,7 +128,7 @@ byte selected_item;
 bool CFG_USING_BUTTONS;
 
 //Version
-const char version[4] = "2.3";
+const char version[4] = "2.4";
 
 //Setup
 void setup()
@@ -158,7 +158,7 @@ debouncerOK.interval(25);
 debouncerFORWARDS.interval(25);
 IRRECEIVE.enableIRIn(); //Enable IR Reception
 attachInterrupt(digitalPinToInterrupt(IR_DIODE), check_IR, CHANGE);//IR Interrupt
-lcd.begin(16,2); //LCD Start
+lcd.begin(20,4); //LCD Start
 }
 
 //*********************************************************************************************************
@@ -361,8 +361,13 @@ void monitor() {
 }
 
 //Settings Menu
-void config(bool splash) {
-    if(splash) {
+void config() {
+    bool welcome_menu = true;
+    bool modes_menu = false;
+    bool BL_menu = false;
+    selected_item = 1;
+    if(IR_test) {CFG_USING_BUTTONS = false;}
+    else if(TEST_BUTTON) {CFG_USING_BUTTONS = true;}
     //Disable CPU and GPU LEDS
     CPU_LED = 0x00;
     GPU_LED = 0x00;
@@ -372,164 +377,174 @@ void config(bool splash) {
     lcd.clear();
     lcd.setCursor(4,0);
     lcd.print(F("SETTINGS"));
-    NBDelay(2000);
-    selected_item = 1;
-    if(IR_test) {CFG_USING_BUTTONS = false;}
-    else if(TEST_BUTTON) {CFG_USING_BUTTONS = true;}
-    selected_item = 1; 
+    CHARLOAD(4);
+    for(int i = 0; i <=5; i++) {
+        lcd.setCursor(8,1);
+        NBDelay(200);
+        lcd.write(byte(0));
+        lcd.setCursor(8,1);
+        NBDelay(200);
+        lcd.write(byte(1));
+    }
     lcd.clear();
-    }
-    else{lcd.clear();}
-    while(true) {
-        //Selection menu
-        if (!CFG_USING_BUTTONS) {
-            lcd.print(F("(1) MONITOR MODE"));
-            lcd.setCursor(0,1);
-            lcd.print(F("(2) BRIGHTNESS"));
-            }
-        else if(CFG_USING_BUTTONS) {
-            switch(selected_item) {
-            case 1:
-            lcd.print(F("(*) MONITOR MODE"));
-            lcd.setCursor(0,1);
-            lcd.print(F("( ) BRIGHTNESS"));
-            break;
-            case 2:
-            lcd.print(F("( ) MONITOR MODE"));
-            lcd.setCursor(0,1);
-            lcd.print(F("(*) BRIGHTNESS"));
-            break;
-            }
-        }
-        //Clear IR and physical buttons values
-        IR_1 = false;
-        IR_2 = false;
-        IR_back = false;
-        TEST_BUTTON = false;
-        OK_BUTTON = false;
-        FORWARDS_BUTTON = false;
-        IR_ACTIVE = false;
-        while(!IR_ACTIVE && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
-        if(IR_1 && !CFG_USING_BUTTONS) {selected_item = 1; modes_select(true);break;}
-        else if(IR_2 && !CFG_USING_BUTTONS) {brightness_select(true);break;}
-        else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 2) {selected_item = 1;}}
-        else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {selected_item = 1; modes_select(true);break;}
-        else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {brightness_select(true);break;}
-        else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {lcd.clear();break;}
-        else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false;lcd.clear();}
-        else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1;lcd.clear();}
-    }
-        //Save values to EEPROM
-        EEPROM_UPDATE();
-        //Reset Variables
-        IR_forwards = false;
-        IR_backwards = false;
-        IR_back = false;
-        OK_BUTTON = false;
-        FORWARDS_BUTTON = false;
-        //Reset Scroll counter
-        scroll_counter = 1;
-        scroll_delay = 0;
-        return;
-}
-
-//Mode Selector
-void modes_select(bool clear) {
-    while(true) {
-        if(clear) {lcd.clear();clear = false;}
-        if(IR_ACTIVE) {
-            lcd.print(F("(1)  (2)   (3)"));
-            lcd.setCursor(0,1);
-            lcd.print(F("EASY AUTO MANUAL"));
-        }
-        else if(!IR_ACTIVE) {
-            switch(selected_item) {
-            case 1:
+    while(welcome_menu || modes_menu || BL_menu) {
+        while(welcome_menu) {
+            //Selection menu
+            if (!CFG_USING_BUTTONS) {
                 lcd.setCursor(0,0);
-                lcd.print(F("(*)  ( )   ( )"));
+                lcd.print(F("(1) MONITOR MODE"));
+                lcd.setCursor(0,1);
+                lcd.print(F("(2) BRIGHTNESS"));
+                }
+            else if(CFG_USING_BUTTONS) {
+                lcd.setCursor(0,0);
+                switch(selected_item) {
+                case 1:
+                lcd.print(F("(*) MONITOR MODE"));
+                lcd.setCursor(0,1);
+                lcd.print(F("( ) BRIGHTNESS"));
+                break;
+                case 2:
+                lcd.print(F("( ) MONITOR MODE"));
+                lcd.setCursor(0,1);
+                lcd.print(F("(*) BRIGHTNESS"));
+                break;
+                }
+            }
+            //Clear IR and physical buttons values
+            IR_1 = false;
+            IR_2 = false;
+            IR_back = false;
+            TEST_BUTTON = false;
+            OK_BUTTON = false;
+            FORWARDS_BUTTON = false;
+            IR_ACTIVE = false;
+            while(!IR_ACTIVE && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+            if(IR_1 && !CFG_USING_BUTTONS) {selected_item = 1; welcome_menu = false; modes_menu = true;break;}
+            else if(IR_2 && !CFG_USING_BUTTONS) {welcome_menu = false; BL_menu = true; lcd.clear(); break;}
+            else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 2) {selected_item = 1;}}
+            else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {selected_item = 1; welcome_menu = false; modes_menu = true; break;}
+            else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {welcome_menu = false; BL_menu = true;lcd.clear(); break;}
+            else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {welcome_menu = false;lcd.clear();break;}
+            else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false;lcd.clear();}
+            else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1;lcd.clear();}
+        }
+        //Mode Selector
+        while(modes_menu) {
+            lcd.clear();
+            if(IR_ACTIVE) {
+                lcd.print(F("(1)  (2)   (3)"));
                 lcd.setCursor(0,1);
                 lcd.print(F("EASY AUTO MANUAL"));
-                break;
-            case 2:
-                lcd.setCursor(0,0);
-                lcd.print(F("( )  (*)   ( )"));
-                lcd.setCursor(0,1);
-                lcd.print(F("EASY AUTO MANUAL"));
-                break;
-            case 3:
-                lcd.setCursor(0,0);
-                lcd.print(F("( )  ( )   (*)"));
-                lcd.setCursor(0,1);
-                lcd.print(F("EASY AUTO MANUAL"));
-                break;
             }
+            else if(!IR_ACTIVE) {
+                switch(selected_item) {
+                case 1:
+                    lcd.setCursor(0,0);
+                    lcd.print(F("(*)  ( )   ( )"));
+                    lcd.setCursor(0,1);
+                    lcd.print(F("EASY AUTO MANUAL"));
+                    break;
+                case 2:
+                    lcd.setCursor(0,0);
+                    lcd.print(F("( )  (*)   ( )"));
+                    lcd.setCursor(0,1);
+                    lcd.print(F("EASY AUTO MANUAL"));
+                    break;
+                case 3:
+                    lcd.setCursor(0,0);
+                    lcd.print(F("( )  ( )   (*)"));
+                    lcd.setCursor(0,1);
+                    lcd.print(F("EASY AUTO MANUAL"));
+                    break;
+                }
+            }
+            //Clean IR buttons values, show options and wait until one of each is pushed.
+            IR_1 = false;
+            IR_2 = false;
+            IR_3 = false;
+            IR_back = false;
+            TEST_BUTTON = false;
+            OK_BUTTON = false;
+            FORWARDS_BUTTON = false;
+            IR_ACTIVE = false;
+            while(!IR_ACTIVE && !IR_back && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+            if(IR_1 && !CFG_USING_BUTTONS) {MODE = 1; modes_menu = false; break;}
+            else if(IR_2 && !CFG_USING_BUTTONS) {MODE = 2; modes_menu = false; break;}
+            else if(IR_3 && !CFG_USING_BUTTONS) {MODE = 3; modes_menu = false;break;}
+            else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 3) {selected_item = 1;}}
+            else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {MODE = 1; modes_menu = false;break;}
+            else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {MODE = 2; modes_menu = false;break;}
+            else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 3) {MODE = 3; modes_menu = false;break;}
+            else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {welcome_menu = true; modes_menu = false;selected_item = 1;lcd.clear();break;}
+            else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false;}
+            else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1;}
         }
-        //Clean IR buttons values, show options and wait until one of each is pushed.
-        IR_1 = false;
-        IR_2 = false;
-        IR_3 = false;
-        IR_back = false;
-        TEST_BUTTON = false;
-        OK_BUTTON = false;
-        FORWARDS_BUTTON = false;
-        IR_ACTIVE = false;
-        while(!IR_ACTIVE && !IR_back && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
-        if(IR_1 && !CFG_USING_BUTTONS) {MODE = 1;break;}
-        else if(IR_2 && !CFG_USING_BUTTONS) {MODE = 2;break;}
-        else if(IR_3 && !CFG_USING_BUTTONS) {MODE = 3;break;}
-        else if(FORWARDS_BUTTON && CFG_USING_BUTTONS) {selected_item++;if(selected_item > 3) {selected_item = 1;} clear = false;}
-        else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 1) {MODE = 1;break;}
-        else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {MODE = 2;break;}
-        else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 3) {MODE = 3;break;}
-        else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false; clear = true;}
-        else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1; clear = true;}
+        
+        //Brightness Selector
+        while(BL_menu) {
+            //BL Level (1-10) Scale
+            int current_bl = BL_BRIGHTNESS / 25;
+            //Dynamic Interface Drawing
+            lcd.setCursor(3,0);
+            lcd.print(F("BRIGHTNESS"));
+            lcd.setCursor(1,1);
+            lcd.print(F("-"));
+            lcd.setCursor(3,1);
+            while(current_bl != 0) {
+                lcd.print(char(255));
+                current_bl--;
+            }
+            current_bl = BL_BRIGHTNESS / 25;
+            lcd.setCursor(current_bl + 3,1);
+            while(current_bl != 0) {
+                lcd.print(F(" "));
+                current_bl--;
+            }
+            lcd.setCursor(14,1);
+            lcd.print(F("+"));
+            current_bl = BL_BRIGHTNESS / 25;
+            //Reset IR Values until and wait until a button is pushed
+            IR_play = false;
+            IR_forwards = false;
+            IR_backwards = false;
+            IR_back = false;
+            TEST_BUTTON = false;
+            OK_BUTTON = false;
+            FORWARDS_BUTTON = false;
+            IR_ACTIVE = false;
+            while(!IR_ACTIVE && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
+            if(FORWARDS_BUTTON && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
+            else if(FORWARDS_BUTTON && current_bl == 10) {BL_BRIGHTNESS = 25;analogWrite(LCD_BL,BL_BRIGHTNESS); lcd.clear();}
+            else if(OK_BUTTON || IR_play){BL_menu = false;}
+            else if(IR_forwards && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
+            else if(IR_backwards && current_bl > 1) {BL_BRIGHTNESS -= 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
+            else if(IR_back || TEST_BUTTON) {
+                if(IR_back) {CFG_USING_BUTTONS = false;}
+                else{CFG_USING_BUTTONS = true;}
+                welcome_menu = true; 
+                BL_menu = false;
+                analogWrite(LCD_BL,OLD_BL_BRIGHTNESS); 
+                BL_BRIGHTNESS = OLD_BL_BRIGHTNESS;
+                lcd.clear();
+                selected_item = 1;
+                break;
+                }
+            else {}
+        }
     }
-    return;
-}
-
-//BL CPANEL
-void brightness_select(bool clear) {
-    while(true) {
-        if(clear) {lcd.clear();}
-        //BL Level (1-10) Scale
-        int current_bl = BL_BRIGHTNESS / 25;
-        //Dynamic Interface Drawing
-        lcd.setCursor(3,0);
-        lcd.print(F("BRIGHTNESS"));
-        lcd.setCursor(1,1);
-        lcd.print(F("-"));
-        lcd.setCursor(3,1);
-        while(current_bl != 0) {
-            lcd.print(char(255));
-            current_bl--;
-        }
-        current_bl = BL_BRIGHTNESS / 25;
-        lcd.setCursor(current_bl + 3,1);
-        while(current_bl != 0) {
-            lcd.print(F(" "));
-            current_bl--;
-        }
-        lcd.setCursor(14,1);
-        lcd.print(F("+"));
-        current_bl = BL_BRIGHTNESS / 25;
-        //Reset IR Values until and wait until a button is pushed
-        IR_play = false;
-        IR_forwards = false;
-        IR_backwards = false;
-        IR_back = false;
-        TEST_BUTTON = false;
-        OK_BUTTON = false;
-        FORWARDS_BUTTON = false;
-        IR_ACTIVE = false;
-        while(!IR_ACTIVE && !TEST_BUTTON && !OK_BUTTON && !FORWARDS_BUTTON) {check_on_off();}
-        if(FORWARDS_BUTTON && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
-        else if(FORWARDS_BUTTON && current_bl == 10) {BL_BRIGHTNESS = 25;analogWrite(LCD_BL,BL_BRIGHTNESS); clear = true;}
-        else if(OK_BUTTON){return;}
-        else if(IR_forwards && current_bl < 10) {BL_BRIGHTNESS += 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
-        else if(IR_backwards && current_bl > 1) {BL_BRIGHTNESS -= 25;analogWrite(LCD_BL,BL_BRIGHTNESS);}
-        else if(IR_play){break;}
-        else {}
-    }
+    //Save values to EEPROM
+    EEPROM_UPDATE();
+    //Reset Variables
+    IR_forwards = false;
+    IR_backwards = false;
+    IR_back = false;
+    IR_play = false;
+    OK_BUTTON = false;
+    FORWARDS_BUTTON = false;
+    //Reset Scroll counter
+    scroll_counter = 1;
+    scroll_delay = 0;
     return;
 }
 //******************************************************************************************************************
@@ -597,7 +612,7 @@ void wait_to_refresh() {
         //Wait 500ms until refresh
         NBDelay(500);
         //If settings button is pushed, go to settings
-        if(IR_test || TEST_BUTTON) {config(true);}
+        if(IR_test || TEST_BUTTON) {config();}
         //Pause if IR Play is pushed (MODE 2)
         else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
             scroll_delay++;
@@ -912,6 +927,10 @@ void CHARLOAD(int mode) {
     static const byte PROGMEM line0_4_FWU[8] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
     static const byte PROGMEM line1_0_FWU[8] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
     static const byte PROGMEM line1_1_FWU[8] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+
+    //CONFIG LOGO
+    static const byte PROGMEM line1_0_CFG[8] = {B00000,B00100,B01110,B11011,B01110,B00100,B00000,B00000};
+    static const byte PROGMEM line1_0_CFG_ALT[8] = {B00000,B00000,B01110,B01010,B01110,B00000,B00000,B00000};
     //Custom Chars BUFFER
     byte RAMCHARS[8] = {};
     switch(mode) {
@@ -966,6 +985,12 @@ void CHARLOAD(int mode) {
             lcd.createChar(5,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_FWU[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
+            break;
+        case 4:
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_CFG[i];
+            lcd.createChar(0,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_CFG_ALT[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
             break;
         }
 }
