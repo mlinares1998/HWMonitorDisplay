@@ -110,10 +110,10 @@ boolean newData = false;
 bool timeoutOK;
 
 //LCD Lines Arrays
-char line0[17];
-char line1[17];
-char line2[17];
-char line3[17];
+char line0[21];
+char line1[21];
+char line2[21];
+char line3[21];
 
 //Button Variables
 //Using Bounce2 Library to deal with button bounce
@@ -128,7 +128,7 @@ byte selected_item;
 bool CFG_USING_BUTTONS;
 
 //Version
-const char version[4] = "2.4";
+const char version[4] = "3.0";
 
 //Setup
 void setup()
@@ -203,32 +203,37 @@ void welcome() {
     //LCD Startup
     analogWrite(LCD_BL, BL_BRIGHTNESS);
     //Welcome Message
-    lcd.setCursor(6,0);
+    CHARLOAD(1);
+    lcd.setCursor(10,0);
+    lcd.write(byte(7));    
+    lcd.setCursor(8,1);
+    lcd.write(byte(6));
     lcd.write(byte(0));
     lcd.write(byte(1));
     lcd.write(byte(2));
+    lcd.setCursor(9,2);
     lcd.write(byte(3));
-    lcd.setCursor(6,1);
     lcd.write(byte(4));
     lcd.write(byte(5));
-    lcd.write(byte(6));
-    lcd.write(byte(7));
-    lcd.setCursor(13,1);
+    lcd.setCursor(17,3);
     lcd.print(version);
-    //Show Splash for 3 seconds
+    //Show Splash for 4 seconds
     //Leds GREEN Progressively
     STATUS_LED = 0x02;
     update_cpanel();
     NBDelay(1000);
-    CHARLOAD(2);
     CPU_LED = 0x02;
     update_cpanel();
-    NBDelay(350);
-    CHARLOAD(1);
-    NBDelay(650);
+    NBDelay(500);
+    CHARLOAD(2);
+    NBDelay(500);
     GPU_LED = 0x02;
     update_cpanel();
-    NBDelay(1000);
+    NBDelay(500);
+    CHARLOAD(3);
+    NBDelay(200);
+    CHARLOAD(2);
+    NBDelay(300);
     RAM_LED = 0x02;
     update_cpanel();
     NBDelay(1000);
@@ -245,13 +250,23 @@ void wait_serial() {
     STATUS_LED = 0x03;
     update_cpanel();
     //Print Waiting message
+    CHARLOAD(5);
     lcd.clear();
-    lcd.setCursor(2,0);
-    lcd.print(F("WAITING FOR"));
-    lcd.setCursor(5,1);
-    lcd.print(F("HELPER"));
+    lcd.setCursor(1,0);
+    lcd.print(F("WAITING FOR HELPER"));
+    lcd.setCursor(9,2);
+    lcd.write(byte(0));
+    lcd.write(byte(1));
+    lcd.write(byte(2));
+    lcd.write(byte(3));
+    lcd.write(byte(4));
+    lcd.setCursor(7,3);
+    lcd.write(byte(5));
+    lcd.write(byte(6));
     current_millis = millis();
+    int dots = 1;
     while(Serial.available() == 0){
+        if(dots > 3) {dots = 0;}
         //STATUS LED = YELLOW, BLINKS EVERY SECONDç
         if(millis() - current_millis >= 1000) {
             switch (STATUS_LED) {
@@ -266,6 +281,8 @@ void wait_serial() {
             update_cpanel();
             current_millis = millis();
             Serial.println(F("<WAITING FOR HELPER>"));
+            CHARLOAD(5 + dots);
+            dots++;
         }
         check_on_off();
     }
@@ -700,7 +717,7 @@ void check_BUTTONS() {
 
 //FIRMWARE UPDATE MODE
 void FWU_MODE() {
-    CHARLOAD(3);
+    CHARLOAD(4);
     //LCD Startup, load brightness value stored in EEPROM
     analogWrite(LCD_BL, 250);
      //STATUS_LED = YELLOW
@@ -710,20 +727,18 @@ void FWU_MODE() {
     RAM_LED = 0x03;
     update_cpanel();
     //Welcome Message
-    lcd.setCursor(0,0);
-    lcd.print(F("FIRMWARE"));
-    lcd.setCursor(1,1);
-    lcd.print(F("UPDATE"));
-    lcd.setCursor(9,1);
-    lcd.write(byte(5));
-    lcd.write(byte(6));
-    lcd.setCursor(11,0);
+    lcd.setCursor(2,0);
+    lcd.print(F("FIRMWARE UPDATE"));
+    lcd.setCursor(9,2);
     lcd.write(byte(0));
     lcd.write(byte(1));
     lcd.write(byte(2));
     lcd.write(byte(3));
     lcd.write(byte(4));
-    lcd.setCursor(13,1);
+    lcd.setCursor(7,3);
+    lcd.write(byte(5));
+    lcd.write(byte(6));
+    lcd.setCursor(17,3);
     lcd.print(version);
     current_millis = millis();
     while(true) {
@@ -908,89 +923,159 @@ void soft_Reset() {asm volatile ("  jmp 0");}
 //LOAD CUSTOM LOGOS FROM FLASH TO RAM
 void CHARLOAD(int mode) {
 
-    //START LOGO OLD
-    static const byte PROGMEM line0_0_START[8]  = {B00000,B00000,B11111,B10000,B10010,B10010,B10010,B10000};
-    static const byte PROGMEM line0_1_START[8] = {B00000,B00000,B11111,B00001,B01001,B01001,B01001,B00001};
-    static const byte PROGMEM line0_1_START_ALT[8] = {B00000,B00000,B11111,B00001,B00001,B00001,B00001,B00001};
-    static const byte PROGMEM line0_2_START[8] = {B00000,B00000,B00011,B00011,B00011,B00011,B11111,B11111};
-    static const byte PROGMEM line0_3_START[8] = {B00000,B00000,B11000,B11000,B11000,B11000,B11111,B11111};
-    static const byte PROGMEM line1_0_START[8] = {B10000,B10000,B10100,B10011,B10000,B11111,B00000,B00000};
-    static const byte PROGMEM line1_1_START[8] = {B00001,B00001,B00101,B11001,B00001,B11111,B00000,B00000};
-    static const byte PROGMEM line1_2_START[8] = {B11111,B11111,B00011,B00011,B00011,B00011,B00000,B00000};
-    static const byte PROGMEM line1_3_START[8] = {B11111,B11111,B11000,B11000,B11000,B11000,B00000,B00000};
+    //WELCOME SCREEN
+    static const byte PROGMEM CHAR_0_WELCOME_A[8] = {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F};
+    static const byte PROGMEM CHAR_1_WELCOME_A[8] = {0x15,0x15,0x00,0x1F,0x11,0x11,0x11,0x1F};
+    static const byte PROGMEM CHAR_2_WELCOME_A[8] = {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F};
+    static const byte PROGMEM CHAR_3_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x10,0x0F,0x02};
+    static const byte PROGMEM CHAR_4_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x00,0x1F,0x00};
+    static const byte PROGMEM CHAR_5_WELCOME_A[8] = {0x1F,0x12,0x14,0x18,0x10,0x00,0x1F,0x02};
+    static const byte PROGMEM CHAR_6_WELCOME_A[8] = {0x06,0x03,0x01,0x00,0x00,0x00,0x00,0x00};
+    static const byte PROGMEM CHAR_7_WELCOME_A[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04};
 
-    //FWU LOGO
-    static const byte PROGMEM line0_0_FWU[8] = {B00000,B00001,B00001,B00001,B00001,B01001,B10101,B01000};
-    static const byte PROGMEM line0_1_FWU[8] = {B11111,B00000,B01110,B01000,B01100,B01000,B00000,B11111};
-    static const byte PROGMEM line0_2_FWU[8] = {B11111,B00000,B10001,B10001,B10101,B01010,B00000,B11111};
-    static const byte PROGMEM line0_3_FWU[8] = {B11111,B00000,B10001,B10001,B10001,B01110,B00000,B11111};
-    static const byte PROGMEM line0_4_FWU[8] = {B00000,B10000,B10000,B10000,B10000,B10000,B10000,B00000};
-    static const byte PROGMEM line1_0_FWU[8] = {B11111,B10000,B10010,B10010,B10010,B10000,B10000,B10000};
-    static const byte PROGMEM line1_1_FWU[8] = {B11111,B00001,B00101,B00101,B00101,B00001,B00001,B00001};
+    static const byte PROGMEM CHAR_0_WELCOME_B[8] = {0x0F,0x10,0x10,0x11,0x11,0x11,0x11,0x10};
+    static const byte PROGMEM CHAR_1_WELCOME_B[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    static const byte PROGMEM CHAR_2_WELCOME_B[8] = {0x1E,0x01,0x01,0x11,0x11,0x11,0x11,0x01};
+    static const byte PROGMEM CHAR_3_WELCOME_B[8] = {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
+    static const byte PROGMEM CHAR_4_WELCOME_B[8] = {0x00,0x00,0x1F,0x0E,0x04,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_5_WELCOME_B[8] = {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x1E};
+    static const byte PROGMEM CHAR_6_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    static const byte PROGMEM CHAR_7_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-    //CONFIG LOGO
-    static const byte PROGMEM line1_0_CFG[8] = {B00000,B00100,B01110,B11011,B01110,B00100,B00000,B00000};
-    static const byte PROGMEM line1_0_CFG_ALT[8] = {B00000,B00000,B01110,B01010,B01110,B00000,B00000,B00000};
+    static const byte PROGMEM CHAR_0_WELCOME_C[8] = {0x0F,0x10,0x10,0x11,0x11,0x11,0x11,0x10};
+    static const byte PROGMEM CHAR_1_WELCOME_C[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    static const byte PROGMEM CHAR_2_WELCOME_C[8] = {0x1E,0x01,0x01,0x01,0x01,0x01,0x01,0x01};
+    static const byte PROGMEM CHAR_3_WELCOME_C[8] = {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
+    static const byte PROGMEM CHAR_4_WELCOME_C[8] = {0x00,0x00,0x1F,0x0E,0x04,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_5_WELCOME_C[8] = {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x1E};
+
+    //FIRMWARE UPDATE SCREEN
+    static const byte PROGMEM CHAR_0_FWU[8] = {0x00,0x01,0x01,0x01,0x01,0x09,0x15,0x08};
+    static const byte PROGMEM CHAR_1_FWU[8] = {0x1F,0x00,0x0E,0x08,0x0C,0x08,0x00,0x1F};
+    static const byte PROGMEM CHAR_2_FWU[8] = {0x1F,0x00,0x11,0x11,0x15,0x0A,0x00,0x1F};
+    static const byte PROGMEM CHAR_3_FWU[8] = {0x1F,0x00,0x11,0x11,0x11,0x0E,0x00,0x1F};
+    static const byte PROGMEM CHAR_4_FWU[8] = {0x00,0x10,0x10,0x10,0x10,0x10,0x10,0x00};
+    static const byte PROGMEM CHAR_5_FWU[8] = {0x1F,0x10,0x12,0x12,0x12,0x10,0x10,0x10};
+    static const byte PROGMEM CHAR_6_FWU[8] = {0x1F,0x01,0x05,0x05,0x05,0x01,0x01,0x01};
+
+    //WAIT FOR SERIAL SCREEN
+    static const byte PROGMEM CHAR_0_SERIAL_A[8] = {0x00,0x00,0x00,0x00,0x04,0x0A,0x04,0x00};
+    static const byte PROGMEM CHAR_1_SERIAL_A[8] = {0x0F,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
+    static const byte PROGMEM CHAR_2_SERIAL_A[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_3_SERIAL_A[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_4_SERIAL_A[8] = {0x00,0x10,0x10,0x10,0x10,0x10,0x10,0x00};
+    static const byte PROGMEM CHAR_5_SERIAL_A[8] = {0x1F,0x10,0x12,0x12,0x12,0x10,0x10,0x10};
+    static const byte PROGMEM CHAR_6_SERIAL_A[8] = {0x1F,0x01,0x05,0x05,0x05,0x01,0x01,0x01};
+
+    static const byte PROGMEM CHAR_1_SERIAL_B[8] = {0x0F,0x10,0x10,0x16,0x16,0x10,0x10,0x0F};
+    static const byte PROGMEM CHAR_2_SERIAL_B[8] = {0x1F,0x00,0x00,0x06,0x06,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_3_SERIAL_B[8] = {0x1F,0x00,0x00,0x06,0x06,0x00,0x00,0x1F};
+    //CFG SCREEN
+
     //Custom Chars BUFFER
     byte RAMCHARS[8] = {};
     switch(mode) {
         case 1:
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_A[i];
             lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_A[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_A[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_A[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_A[i];
             lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_A[i];
             lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_2_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_A[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_3_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_A[i];
             lcd.createChar(7,(uint8_t *)RAMCHARS);
             break;
         case 2:
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_B[i];
             lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_START_ALT[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_B[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_B[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_B[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_B[i];
             lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_B[i];
             lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_2_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_B[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_3_START[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_B[i];
             lcd.createChar(7,(uint8_t *)RAMCHARS);
             break;
         case 3:
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_0_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_C[i];
             lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_1_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_C[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_2_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_C[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_3_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_C[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line0_4_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_C[i];
             lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_C[i];
             lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_1_FWU[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_B[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_B[i];
+            lcd.createChar(7,(uint8_t *)RAMCHARS);
             break;
         case 4:
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_CFG[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_FWU[i];
             lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i]=line1_0_CFG_ALT[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_FWU[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_FWU[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_FWU[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_FWU[i];
+            lcd.createChar(4,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FWU[i];
+            lcd.createChar(5,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FWU[i];
+            lcd.createChar(6,(uint8_t *)RAMCHARS);
+            break;
+        case 5:
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_SERIAL_A[i];
+            lcd.createChar(0,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_SERIAL_A[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_A[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_SERIAL_A[i];
+            lcd.createChar(4,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_SERIAL_A[i];
+            lcd.createChar(5,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_SERIAL_A[i];
+            lcd.createChar(6,(uint8_t *)RAMCHARS);
+            break;
+        case 6:
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_SERIAL_B[i];
+            lcd.createChar(1,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_A[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
+            break;
+        case 7:
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_B[i];
+            lcd.createChar(2,(uint8_t *)RAMCHARS);
+            break;
+        case 8:
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_B[i];
+            lcd.createChar(3,(uint8_t *)RAMCHARS);
             break;
         }
 }
@@ -999,3 +1084,4 @@ void NBDelay(int time) {
     current_millis = millis(); 
     while (millis() - current_millis <= time) {check_on_off();}
     }
+
