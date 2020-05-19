@@ -81,6 +81,8 @@ byte RAM_LED;
 //Monitoring Variables
 char CPU_TEMP[4];
 char CPU_FAN[5];
+char CH1_FAN[5];
+char CH2_FAN[5];
 char CPU_CLK[5];
 char CPU_C0_CLK[5];
 char CPU_C0_VID[5];
@@ -90,13 +92,41 @@ char CPU_C2_CLK[5];
 char CPU_C2_VID[5];
 char CPU_C3_CLK[5];
 char CPU_C3_VID[5];
+char CPU_C4_CLK[5];
+char CPU_C4_VID[5];
+char CPU_C5_CLK[5];
+char CPU_C5_VID[5];
+char CPU_C6_CLK[5];
+char CPU_C6_VID[5];
+char CPU_C7_CLK[5];
+char CPU_C7_VID[5];
+char CPU_C8_CLK[5];
+char CPU_C8_VID[5];
+char CPU_C9_CLK[5];
+char CPU_C9_VID[5];
+char CPU_C10_CLK[5];
+char CPU_C10_VID[5];
+char CPU_C11_CLK[5];
+char CPU_C11_VID[5];
+char CPU_C12_CLK[5];
+char CPU_C12_VID[5];
+char CPU_C13_CLK[5];
+char CPU_C13_VID[5];
+char CPU_C14_CLK[5];
+char CPU_C14_VID[5];
+char CPU_C15_CLK[5];
+char CPU_C15_VID[5];
 char CPU_USAGE[4];
 char CPU_VCORE[5];
 char CPU_VSOC[5];
+char CPU_POWER[6];
+char SOC_POWER[6];
+char CPU_TOTAL_POWER[6];
+char GPU_POWER[6];
 char GPU_TEMP[4];
 char GPU_CLK[5];
 char VRAM_CLK[5];
-char GPU_FAN{5};
+char GPU_FAN[5];
 char GPU_FPS[4];
 char GPU_USAGE[4];
 char GPU_VCORE[5];
@@ -108,6 +138,13 @@ char RAM_CLK[5];
 char RAM_CONTROLLER_CLK[5];
 char UP_SPEED[5];
 char DW_SPEED[5];
+char DAY[3];
+char MONTH[3];
+char YEAR[5];
+char HOUR[3];
+char MINUTE[3];
+char SECOND[3];
+char GMT[6];
 byte ROOM_TEMP;
 byte ROOM_HUMIDITY;
 
@@ -121,7 +158,7 @@ unsigned long current_millis; //To wait without using delay()
 byte DHT_Counter;
 
 //Serial Monitoring
-const static byte PROGMEM numChars = 255;
+const static byte PROGMEM numChars = 128;
 char receivedChars[numChars];
 boolean newData = false;
 bool timeoutOK;
@@ -191,8 +228,6 @@ void standby() {
     EEPROM_READ();
     //Disable BUZZER
     BUZZER_ON = false;
-    //Init Welcome Logo Chars
-    CHARLOAD(1);
     //Reset Power Buttons
     IR_on_off = false;
     //Serial OFF
@@ -257,36 +292,7 @@ void welcome() {
 
 void wait_serial() {
     //Clear Char Arrays
-    memset(CPU_TEMP, 0, sizeof CPU_TEMP);
-    memset(CPU_FAN, 0, sizeof CPU_FAN);
-    memset(CPU_CLK, 0, sizeof CPU_CLK);
-    memset(CPU_USAGE, 0, sizeof CPU_USAGE);
-    memset(GPU_TEMP, 0, sizeof GPU_TEMP);
-    memset(CPU_VCORE, 0, sizeof CPU_VCORE);
-    memset(CPU_VSOC, 0, sizeof CPU_VSOC);
-    memset(GPU_CLK, 0, sizeof GPU_CLK);
-    memset(VRAM_CLK,0 , sizeof VRAM_CLK);
-    memset(GPU_FAN, 0, sizeof GPU_FAN);
-    memset(GPU_FPS, 0, sizeof GPU_FPS);
-    memset(GPU_USAGE, 0, sizeof GPU_USAGE);
-    memset(GPU_VCORE, 0, sizeof GPU_VCORE);
-    memset(RAM_USED, 0, sizeof RAM_USED);
-    memset(RAM_FREE, 0, sizeof RAM_FREE);
-    memset(PAGE_FILE_USAGE, 0, sizeof PAGE_FILE_USAGE);
-    memset(VRAM_USED, 0, sizeof VRAM_USED);
-    memset(RAM_CLK,0 , sizeof RAM_CLK);
-    memset(RAM_CONTROLLER_CLK, 0, sizeof RAM_CONTROLLER_CLK);
-    memset(UP_SPEED, 0, sizeof UP_SPEED);
-    memset(DW_SPEED, 0, sizeof DW_SPEED);
-    memset(dataformat, 0, sizeof dataformat);
-    memset(CPU_C0_CLK, 0, sizeof CPU_C0_CLK);
-    memset(CPU_C0_VID, 0, sizeof CPU_C0_VID);
-    memset(CPU_C1_CLK, 0, sizeof CPU_C1_CLK);
-    memset(CPU_C1_VID, 0, sizeof CPU_C1_VID);
-    memset(CPU_C2_CLK, 0, sizeof CPU_C2_CLK);
-    memset(CPU_C2_VID, 0, sizeof CPU_C2_VID);
-    memset(CPU_C3_CLK, 0, sizeof CPU_C3_CLK);
-    memset(CPU_C3_VID, 0, sizeof CPU_C3_VID);
+    ClearArrays();
     Serial.begin(115200); //Serial Start
     //STATUS_LED = YELLOW OTHERS = OFF
     CPU_LED = 0x00;
@@ -309,7 +315,7 @@ void wait_serial() {
     lcd.write(byte(5));
     lcd.write(byte(6));
     current_millis = millis();
-    int dots = 1;
+    byte dots = 1;
     while(Serial.available() == 0){
         if(dots > 3) {dots = 0;}
         //STATUS LED = YELLOW, BLINKS EVERY SECONDç
@@ -325,7 +331,7 @@ void wait_serial() {
             }
             update_cpanel();
             current_millis = millis();
-            Serial.println(F("<WAITING FOR HELPER>"));
+            Serial.println(F("H"));
             CHARLOAD(5 + dots);
             dots++;
         }
@@ -336,9 +342,9 @@ void wait_serial() {
     update_cpanel();
     lcd.clear();
     //Desync FIX
-    lcd.setCursor(5,0);
-    lcd.print(F("CONNECTED"));
-    CHARLOAD(9);
+    CHARLOAD(2);
+    lcd.setCursor(6,0);
+    lcd.print(F("CONNECTED")); 
     lcd.setCursor(9,2);
     lcd.write(byte(0));
     lcd.write(byte(1));
@@ -398,41 +404,101 @@ void EASYMode() {
     lcd.print(F("NET:"));
     snprintf(dataformat,8,"%4s",DW_SPEED);lcd.print(dataformat);lcd.print(F("/"));
     snprintf(dataformat,8,"%-4s",UP_SPEED),lcd.print(dataformat);lcd.print(F("M"));
-    snprintf(dataformat,8,"%3s",GPU_FPS),lcd.print(dataformat);lcd.print(F("FPS"));
+    if(GPU_FPS[0] != 0) {snprintf(dataformat,8,"%3s",GPU_FPS),lcd.print(dataformat);lcd.print(F("FPS"));}
     return;
 }
 void AdvancedMode() {
+    //DELTA AMBIENT VS PC TEMPS
+    byte DELTACPU = (atoi(CPU_TEMP) - byte(DHT.temperature));
+    byte DELTAGPU = (atoi(GPU_TEMP) - byte(DHT.temperature));
     switch(scroll_counter) {
-    //CPU CLOCKS/TEMP
+    //CPU CLOCKS/TEMP/VCORES
     case 1:
-    lcd.setCursor(4,0);
-    lcd.print(F("<CPU CLOCKS>"));
+    lcd.setCursor(7,0);
+    lcd.print(F("<CPU0>"));
     lcd.setCursor(0,1);
-    lcd.print(F("AVG:"));snprintf(dataformat,8,"%4sM",CPU_CLK);lcd.print(dataformat);
-    snprintf(dataformat,8," %3s%cC",CPU_TEMP,char(223));lcd.print(dataformat);
-    snprintf(dataformat,8," %3s%%",CPU_USAGE);lcd.print(dataformat);
+    lcd.print(F("AVG:"));snprintf(dataformat,8,"%4sMhz",CPU_CLK);lcd.print(dataformat);
+    lcd.print(F("  T:"));snprintf(dataformat,8,"%3s%cC",CPU_TEMP,char(223));lcd.print(dataformat);
     lcd.setCursor(0,2);
-    lcd.print(F("C0:"));snprintf(dataformat,8,"%4sM",CPU_C0_CLK);lcd.print(dataformat);
-    lcd.print(F("    C1:"));snprintf(dataformat,8,"%4sM",CPU_C1_CLK);lcd.print(dataformat);
-    lcd.setCursor(0,3);
-    lcd.print(F("C2:"));snprintf(dataformat,8,"%4sM",CPU_C2_CLK);lcd.print(dataformat);
-    lcd.print(F("    C3:"));snprintf(dataformat,8,"%4sM",CPU_C3_CLK);lcd.print(dataformat);
-    break;
-    //GPU VCORES
-    case 2:
-    lcd.setCursor(4,0);
-    lcd.print(F("<CPU VCORES>"));
-    lcd.setCursor(0,1);
     lcd.print(F("CORE:"));snprintf(dataformat,8,"%4sV",CPU_VCORE);lcd.print(dataformat);
     lcd.print(F(" SoC:"));snprintf(dataformat,8,"%4sV",CPU_VSOC);lcd.print(dataformat);
-    lcd.setCursor(0,2);
-    lcd.print(F("C0:"));snprintf(dataformat,8,"%4sV",CPU_C0_VID);lcd.print(dataformat);
-    lcd.print(F("    C1:"));snprintf(dataformat,8,"%4sV",CPU_C1_VID);lcd.print(dataformat);
     lcd.setCursor(0,3);
-    lcd.print(F("C2:"));snprintf(dataformat,8,"%4sV",CPU_C2_VID);lcd.print(dataformat);
-    lcd.print(F("    C3:"));snprintf(dataformat,8,"%4sV",CPU_C3_VID);lcd.print(dataformat);
+    lcd.print(F("USE:"));snprintf(dataformat,8,"%3s%%",CPU_USAGE);lcd.print(dataformat);
+    lcd.print(F("  PWR:"));snprintf(dataformat,8,"%5sW",CPU_POWER);lcd.print(dataformat);
+    break;
+    case 2:
+    lcd.setCursor(0,0);
+    if(CPU_C0_CLK[0] != 0) {
+    lcd.print(F("C00:"));snprintf(dataformat,8,"%4sMhz",CPU_C0_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,0);snprintf(dataformat,8,"%4sV",CPU_C0_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,1);
+    if(CPU_C1_CLK[0] != 0) {
+    lcd.print(F("C01:"));snprintf(dataformat,8,"%4sMhz",CPU_C1_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,1);snprintf(dataformat,8,"%4sV",CPU_C1_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,2);
+    if(CPU_C2_CLK[0] != 0) {
+    lcd.print(F("C02:"));snprintf(dataformat,8,"%4sMhz",CPU_C2_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,2);snprintf(dataformat,8,"%4sV",CPU_C2_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,3);
+    if(CPU_C3_CLK[0] != 0) {
+    lcd.print(F("C03:"));snprintf(dataformat,8,"%4sMhz",CPU_C3_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,3);snprintf(dataformat,8,"%4sV",CPU_C3_VID);lcd.print(dataformat);}
     break;
     case 3:
+    lcd.setCursor(0,0);
+    if(CPU_C4_CLK[0] != 0) {
+    lcd.print(F("C04:"));snprintf(dataformat,8,"%4sMhz",CPU_C4_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,0);snprintf(dataformat,8,"%4sV",CPU_C4_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,1);
+    if(CPU_C5_CLK[0] != 0) {
+    lcd.print(F("C05:"));snprintf(dataformat,8,"%4sMhz",CPU_C5_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,1);snprintf(dataformat,8,"%4sV",CPU_C5_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,2);
+    if(CPU_C6_CLK[0] != 0) {
+    lcd.print(F("C06:"));snprintf(dataformat,8,"%4sMhz",CPU_C6_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,2);snprintf(dataformat,8,"%4sV",CPU_C6_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,3);
+    if(CPU_C7_CLK[0] != 0) {
+    lcd.print(F("C07:"));snprintf(dataformat,8,"%4sMhz",CPU_C7_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,3);snprintf(dataformat,8,"%4sV",CPU_C7_VID);lcd.print(dataformat);}
+    break;
+    case 4:
+    lcd.setCursor(0,0);
+    if(CPU_C8_CLK[0] != 0) {
+    lcd.print(F("C08:"));snprintf(dataformat,8,"%4sMhz",CPU_C8_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,0);snprintf(dataformat,8,"%4sV",CPU_C8_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,1);
+    if(CPU_C9_CLK[0] != 0) {
+    lcd.print(F("C09:"));snprintf(dataformat,8,"%4sMhz",CPU_C9_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,1);snprintf(dataformat,8,"%4sV",CPU_C9_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,2);
+    if(CPU_C10_CLK[0] != 0) {
+    lcd.print(F("C10:"));snprintf(dataformat,8,"%4sMhz",CPU_C10_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,2);snprintf(dataformat,8,"%4sV",CPU_C10_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,3);
+    if(CPU_C11_CLK[0] != 0) {
+    lcd.print(F("C11:"));snprintf(dataformat,8,"%4sMhz",CPU_C11_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,3);snprintf(dataformat,8,"%4sV",CPU_C11_VID);lcd.print(dataformat);}
+    break;
+    case 5:
+    lcd.setCursor(0,0);
+    if(CPU_C12_CLK[0] != 0) {
+    lcd.print(F("C12:"));snprintf(dataformat,8,"%4sMhz",CPU_C12_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,0);snprintf(dataformat,8,"%4sV",CPU_C12_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,1);
+    if(CPU_C13_CLK[0] != 0) {
+    lcd.print(F("C13:"));snprintf(dataformat,8,"%4sMhz",CPU_C13_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,1);snprintf(dataformat,8,"%4sV",CPU_C13_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,2);
+    if(CPU_C14_CLK[0] != 0) {
+    lcd.print(F("C14:"));snprintf(dataformat,8,"%4sMhz",CPU_C14_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,2);snprintf(dataformat,8,"%4sV",CPU_C14_VID);lcd.print(dataformat);}
+    lcd.setCursor(0,3);
+    if(CPU_C15_CLK[0] != 0) {
+    lcd.print(F("C15:"));snprintf(dataformat,8,"%4sMhz",CPU_C15_CLK);lcd.print(dataformat);
+    lcd.setCursor(15,3);snprintf(dataformat,8,"%4sV",CPU_C15_VID);lcd.print(dataformat);}
+    break;
+    case 6:
     //GPU
     lcd.setCursor(7,0);
     lcd.print(F("<GPU0>"));
@@ -446,10 +512,10 @@ void AdvancedMode() {
     lcd.print(F(" MCLK:"));snprintf(dataformat,8,"%4sM",VRAM_CLK);lcd.print(dataformat);
     lcd.setCursor(0,3);
     lcd.print(F("VRAM:"));snprintf(dataformat,8,"%5sMB",VRAM_USED);lcd.print(dataformat);
-    snprintf(dataformat,8,"  %3s",GPU_FPS),lcd.print(dataformat);lcd.print(F("FPS"));
+    if(GPU_FPS[0] != 0){snprintf(dataformat,8,"  %3s",GPU_FPS),lcd.print(dataformat);lcd.print(F("FPS"));}
     break;
     //RAM STATS
-    case 4:
+    case 7:
     lcd.setCursor(7,0);
     lcd.print(F("<RAM>"));
     lcd.setCursor(0,1);
@@ -460,12 +526,10 @@ void AdvancedMode() {
     snprintf(dataformat,8,"%6s",RAM_USED);lcd.print(dataformat);lcd.print(F("/"));
     snprintf(dataformat,8,"%-6s",RAM_FREE),lcd.print(dataformat);lcd.print(F(" MB"));
     lcd.setCursor(0,3);
-    lcd.print(F("PAGE FILE USAGE:"));snprintf(dataformat,8,"%3s%%",PAGE_FILE_USAGE);lcd.print(dataformat);
+    lcd.print(F("PAGE:"));snprintf(dataformat,8,"%3s%%",PAGE_FILE_USAGE);lcd.print(dataformat);
     break;
     //Thermals
-    case 5:
-    byte DELTACPU = (atoi(CPU_TEMP) - byte(DHT.temperature));
-    byte DELTAGPU = (atoi(GPU_TEMP) - byte(DHT.temperature));
+    case 8:
     lcd.setCursor(5,0);
     lcd.print(F("<THERMALS>"));
     lcd.setCursor(0,1);
@@ -473,13 +537,50 @@ void AdvancedMode() {
     lcd.print(F("  GPU:"));snprintf(dataformat,8,"%3s%cC",GPU_TEMP,char(223));lcd.print(dataformat);
     lcd.setCursor(0,2);
     lcd.print(F("ROOM:"));snprintf(dataformat,8,"%3i%cC",byte(DHT.temperature),char(223));lcd.print(dataformat);
-    lcd.print(F("  HUM:"));snprintf(dataformat,8,"%3i%%",byte(DHT.humidity));lcd.print(dataformat);
+    lcd.print(F(" HUMD:"));snprintf(dataformat,8,"%3i%%",byte(DHT.humidity));lcd.print(dataformat);
     lcd.setCursor(0,3);
     lcd.write(byte(0));lcd.print(F("CPU"));snprintf(dataformat,8,"%3i%cC",DELTACPU,char(223));lcd.print(dataformat);
     lcd.print(F(" "));lcd.write(byte(0));lcd.print(F("GPU"));snprintf(dataformat,8,"%3i%cC",DELTAGPU,char(223));lcd.print(dataformat);
     break;
     //FANS
-    case 6:
+    case 9:
+    lcd.setCursor(4,0);
+    lcd.print(F("<FANs (RPM)>"));
+    lcd.setCursor(0,1);
+    lcd.print(F("CPU:"));snprintf(dataformat,8,"%4s",CPU_FAN);lcd.print(dataformat);
+    lcd.setCursor(12,1);
+    lcd.print(F("GPU:"));snprintf(dataformat,8,"%4s",GPU_FAN);lcd.print(dataformat);
+    lcd.setCursor(0,2);
+    lcd.print(F("CH1:"));snprintf(dataformat,8,"%4s",CH1_FAN);lcd.print(dataformat);
+    lcd.setCursor(12,2);
+    lcd.print(F("CH2:"));snprintf(dataformat,8,"%4s",CH2_FAN);lcd.print(dataformat);
+    break;
+    //POWERS
+    case 10:
+    lcd.setCursor(6,0);
+    lcd.print(F("<POWERS>"));
+    lcd.setCursor(0,1);
+    lcd.print(F("CPU:"));snprintf(dataformat,8,"%5sW",CPU_POWER);lcd.print(dataformat);
+    lcd.print(F("SoC:"));snprintf(dataformat,8,"%5sW",SOC_POWER);lcd.print(dataformat);
+    lcd.setCursor(0,2);
+    lcd.print(F("CPU+SOC:"));snprintf(dataformat,8,"%5sW",CPU_TOTAL_POWER);lcd.print(dataformat);
+    lcd.setCursor(0,3);
+    lcd.print(F("GPU:"));snprintf(dataformat,8,"%5sW",GPU_POWER);lcd.print(dataformat);
+    break;
+    //TIME/DATE
+    case 11:
+    lcd.setCursor(7,0);
+    lcd.print(F("<CLOCK>"));
+    lcd.setCursor(5,1);
+    snprintf(dataformat,8,"%2s/",DAY);lcd.print(dataformat);
+    snprintf(dataformat,8,"%2s/",MONTH);lcd.print(dataformat);
+    snprintf(dataformat,8,"%4s",YEAR);lcd.print(dataformat);
+    lcd.setCursor(6,2);
+    snprintf(dataformat,8,"%2s:",HOUR);lcd.print(dataformat);
+    snprintf(dataformat,8,"%2s:",MINUTE);lcd.print(dataformat);
+    snprintf(dataformat,8,"%2s",SECOND);lcd.print(dataformat);
+    lcd.setCursor(5,3);
+    lcd.print(F("GMT:"));snprintf(dataformat,8,"%6s",GMT);lcd.print(dataformat);
     break;
     }
 return;
@@ -500,7 +601,7 @@ void config() {
     update_cpanel();
     //Show Settings splash for 3 seconds
     lcd.clear();
-    lcd.setCursor(4,0);
+    lcd.setCursor(7,0);
     lcd.print(F("SETTINGS"));
     CHARLOAD(4);
     for(int i = 0; i <=5; i++) {
@@ -516,10 +617,15 @@ void config() {
         while(welcome_menu) {
             //Selection menu
             if (!CFG_USING_BUTTONS) {
-                lcd.setCursor(0,0);
+                lcd.setCursor(1,0);
                 lcd.print(F("(1) MONITOR MODE"));
-                lcd.setCursor(0,1);
+                lcd.setCursor(1,1);
                 lcd.print(F("(2) BRIGHTNESS"));
+                lcd.setCursor(1,2);
+                lcd.print(F("(3) SCROLL DELAY"));
+                lcd.setCursor(1,3);
+                lcd.print(F("(4) SPEAKER"));
+
                 }
             else if(CFG_USING_BUTTONS) {
                 lcd.setCursor(0,0);
@@ -740,18 +846,38 @@ void wait_to_refresh() {
     else if(MODE == 2 && (!IR_play && !OK_BUTTON)) {
         scroll_delay++;
         //Change Page every 2s
-        if(scroll_delay == 4) {scroll_counter++;scroll_delay = 0;lcd.clear();}
+        if(scroll_delay == 4) {
+            scroll_counter++;
+            scroll_delay = 0;
+            if(CPU_C4_CLK[0] == 0 && scroll_counter == 3) {scroll_counter = 6;}
+            if(CPU_C8_CLK[0] == 0 && scroll_counter == 4) {scroll_counter = 6;}
+            if(CPU_C12_CLK[0] == 0 && scroll_counter == 5) {scroll_counter = 6;}
+            lcd.clear();}
     }
 
     //Manual Control (MODE 3)
     else if(MODE == 3 && (IR_backwards || IR_forwards || FORWARDS_BUTTON)) {
         //Change Page if Forwards or Backwards buttons are pushed.
-        if (IR_backwards) {scroll_counter--;IR_backwards = false;lcd.clear();}
-        if (IR_forwards || FORWARDS_BUTTON) {scroll_counter++;IR_forwards = false; FORWARDS_BUTTON = false;lcd.clear();}
-    }
+        if (IR_backwards) {
+            scroll_counter--;
+            IR_backwards = false;
+            if(CPU_C12_CLK[0] == 0 && scroll_counter == 5) {scroll_counter--;}
+            if(CPU_C8_CLK[0] == 0 && scroll_counter == 4) {scroll_counter--;}
+            if(CPU_C4_CLK[0] == 0 && scroll_counter == 3) {scroll_counter--;}
+            lcd.clear();
+            }
+            if(IR_forwards || FORWARDS_BUTTON) {
+            scroll_counter++;
+            IR_forwards = false; 
+            FORWARDS_BUTTON = false;
+            if(CPU_C4_CLK[0] == 0 && scroll_counter == 3) {scroll_counter = 6;}
+            if(CPU_C8_CLK[0] == 0 && scroll_counter == 4) {scroll_counter = 6;}
+            if(CPU_C12_CLK[0] == 0 && scroll_counter == 5) {scroll_counter = 6;}
+            lcd.clear();}
+            }
     //Back to Start/End
-    if(scroll_counter == 7) {scroll_counter = 1;lcd.clear();}
-    else if(scroll_counter == 0) {scroll_counter = 6;lcd.clear();}
+    if(scroll_counter == 12) {scroll_counter = 1;lcd.clear();}
+    else if(scroll_counter == 0) {scroll_counter = 11;lcd.clear();}
     //LED Updating
     //Convert Char Arrays to numeric variables
     unsigned long RAM_FREE_ULONG = atoi(RAM_FREE);
@@ -783,7 +909,7 @@ void getsensors() {
     //Read DHT11 every 1.5s and judge the state according to the return value
     if(DHT_Counter == 3) {int chk = DHT.read11(TEMP_HUMIDITY); DHT_Counter = 0;}
     // Decode Serial Data Array
-    char *array_table[252];
+    char *array_table[125];
     int i = 0;
     //Create an Array separating received data
     array_table[i] = strtok(receivedChars,":");
@@ -806,18 +932,58 @@ void getsensors() {
         else if(String(array_table[i]) == "C2V") {String(array_table[i+1]).toCharArray(CPU_C2_VID,5);}
         else if(String(array_table[i]) == "C3C") {String(array_table[i+1]).toCharArray(CPU_C3_CLK,5);}
         else if(String(array_table[i]) == "C3V") {String(array_table[i+1]).toCharArray(CPU_C3_VID,5);}
+        else if(String(array_table[i]) == "C4C") {String(array_table[i+1]).toCharArray(CPU_C4_CLK,5);}
+        else if(String(array_table[i]) == "C4V") {String(array_table[i+1]).toCharArray(CPU_C4_VID,5);}
+        else if(String(array_table[i]) == "C5C") {String(array_table[i+1]).toCharArray(CPU_C5_CLK,5);}
+        else if(String(array_table[i]) == "C5V") {String(array_table[i+1]).toCharArray(CPU_C5_VID,5);}
+        else if(String(array_table[i]) == "C6C") {String(array_table[i+1]).toCharArray(CPU_C6_CLK,5);}
+        else if(String(array_table[i]) == "C6V") {String(array_table[i+1]).toCharArray(CPU_C6_VID,5);}
+        else if(String(array_table[i]) == "C7C") {String(array_table[i+1]).toCharArray(CPU_C7_CLK,5);}
+        else if(String(array_table[i]) == "C7V") {String(array_table[i+1]).toCharArray(CPU_C7_VID,5);}
+        else if(String(array_table[i]) == "C8C") {String(array_table[i+1]).toCharArray(CPU_C8_CLK,5);}
+        else if(String(array_table[i]) == "C8V") {String(array_table[i+1]).toCharArray(CPU_C8_VID,5);}
+        else if(String(array_table[i]) == "C9C") {String(array_table[i+1]).toCharArray(CPU_C9_CLK,5);}
+        else if(String(array_table[i]) == "C9V") {String(array_table[i+1]).toCharArray(CPU_C9_VID,5);}
+        else if(String(array_table[i]) == "C10C") {String(array_table[i+1]).toCharArray(CPU_C10_CLK,5);}
+        else if(String(array_table[i]) == "C10V") {String(array_table[i+1]).toCharArray(CPU_C10_VID,5);}
+        else if(String(array_table[i]) == "C11C") {String(array_table[i+1]).toCharArray(CPU_C11_CLK,5);}
+        else if(String(array_table[i]) == "C11V") {String(array_table[i+1]).toCharArray(CPU_C11_VID,5);}
+        else if(String(array_table[i]) == "C12C") {String(array_table[i+1]).toCharArray(CPU_C12_CLK,5);}
+        else if(String(array_table[i]) == "C12V") {String(array_table[i+1]).toCharArray(CPU_C12_VID,5);}
+        else if(String(array_table[i]) == "C13C") {String(array_table[i+1]).toCharArray(CPU_C13_CLK,5);}
+        else if(String(array_table[i]) == "C13V") {String(array_table[i+1]).toCharArray(CPU_C13_VID,5);}
+        else if(String(array_table[i]) == "C14C") {String(array_table[i+1]).toCharArray(CPU_C14_CLK,5);}
+        else if(String(array_table[i]) == "C14V") {String(array_table[i+1]).toCharArray(CPU_C14_VID,5);}
+        else if(String(array_table[i]) == "C15C") {String(array_table[i+1]).toCharArray(CPU_C15_CLK,5);}
+        else if(String(array_table[i]) == "C15V") {String(array_table[i+1]).toCharArray(CPU_C15_VID,5);}
         else if(String(array_table[i]) == "CUA") {String(array_table[i+1]).toCharArray(CPU_USAGE,4);}
         else if(String(array_table[i]) == "CT") {String(array_table[i+1]).toCharArray(CPU_TEMP,4);}
+        else if(String(array_table[i]) == "CPF") {String(array_table[i+1]).toCharArray(CPU_FAN,5);}
+        else if(String(array_table[i]) == "CH1") {String(array_table[i+1]).toCharArray(CH1_FAN,5);}
+        else if(String(array_table[i]) == "CH2") {String(array_table[i+1]).toCharArray(CH2_FAN,5);}
         else if(String(array_table[i]) == "CVT") {String(array_table[i+1]).toCharArray(CPU_VCORE,5);}
         else if(String(array_table[i]) == "CVS") {String(array_table[i+1]).toCharArray(CPU_VSOC,5);}
+        else if(String(array_table[i]) == "CW") {String(array_table[i+1]).toCharArray(CPU_POWER,6);}
+        else if(String(array_table[i]) == "SW") {String(array_table[i+1]).toCharArray(SOC_POWER,6);}
+        else if(String(array_table[i]) == "CWT") {String(array_table[i+1]).toCharArray(CPU_TOTAL_POWER,6);}
+        else if(String(array_table[i]) == "GW") {String(array_table[i+1]).toCharArray(GPU_POWER,6);}
         else if(String(array_table[i]) == "GV") {String(array_table[i+1]).toCharArray(GPU_VCORE,5);}
         else if(String(array_table[i]) == "GT") {String(array_table[i+1]).toCharArray(GPU_TEMP,4);}
+        else if(String(array_table[i]) == "GPF") {String(array_table[i+1]).toCharArray(GPU_FAN,5);}
         else if(String(array_table[i]) == "GC") {String(array_table[i+1]).toCharArray(GPU_CLK,5);}
         else if(String(array_table[i]) == "VRC") {String(array_table[i+1]).toCharArray(VRAM_CLK,5);}
         else if(String(array_table[i]) == "GU") {String(array_table[i+1]).toCharArray(GPU_USAGE,4);}
         else if(String(array_table[i]) == "FP") {String(array_table[i+1]).toCharArray(GPU_FPS,4);}
         else if(String(array_table[i]) == "UP") {String(array_table[i+1]).toCharArray(UP_SPEED,5);}
         else if(String(array_table[i]) == "DW") {String(array_table[i+1]).toCharArray(DW_SPEED,5);}
+        else if(String(array_table[i]) == "YY") {String(array_table[i+1]).toCharArray(YEAR,5);}
+        else if(String(array_table[i]) == "MM") {String(array_table[i+1]).toCharArray(MONTH,3);}
+        else if(String(array_table[i]) == "DD") {String(array_table[i+1]).toCharArray(DAY,3);}
+        else if(String(array_table[i]) == "HH") {String(array_table[i+1]).toCharArray(HOUR,3);}
+        else if(String(array_table[i]) == "MN") {String(array_table[i+1]).toCharArray(MINUTE,3);}
+        else if(String(array_table[i]) == "SS") {String(array_table[i+1]).toCharArray(SECOND,3);}
+        else if(String(array_table[i]) == "GM") {String(array_table[i+1]).toCharArray(GMT,6);}
+
     }
     return;
 }
@@ -914,24 +1080,37 @@ void update_cpanel() {
 //Receives data from PC
 void get_serial() {;
     //First Chunk
-    Serial.println(F("<WAITINGB1>"));
-    //Read data until char is fully received or timeout
-    current_millis = millis();
-    while(!newData && !timeoutOK) {recvWithStartEndMarkers();}
-    showNewData();
-    //Get sensors data
-    getsensors();
-    delay(10);
+    Serial.println(F("A"));
+    read_chunk();
+    if(timeoutOK) {return;}
     //Second Chunk
-    Serial.println(F("<WAITINGB2>"));
-    //Read data until char is fully received or timeout
-    current_millis = millis();
-    while(!newData && !timeoutOK) {recvWithStartEndMarkers();}
-    showNewData();
-    //Get sensors data
-    getsensors();
+    Serial.println(F("B"));
+    read_chunk();
+    if(timeoutOK) {return;}
+    //Third Chunk
+    Serial.println(F("C"));
+    read_chunk();
+    if(timeoutOK) {return;}
+    //Forth Chunk
+    Serial.println(F("D"));
+    read_chunk();
+    if(timeoutOK) {return;}
+    //Fifth Chunk
+    Serial.println(F("E"));
+    read_chunk();
+    if(timeoutOK) {return;}
     return;
 }
+
+void read_chunk() {
+    //Read data until char is fully received or timeout
+    current_millis = millis();
+    while(!newData && !timeoutOK) {recvWithStartEndMarkers();}
+    if(timeoutOK) {return;}
+    showNewData();
+    //Get sensors data
+    getsensors();
+    return;}
 
 void recvWithStartEndMarkers() {
     static boolean recvInProgress = false;
@@ -1080,7 +1259,6 @@ void CHARLOAD(int mode) {
     //WELCOME SCREEN
     static const byte PROGMEM CHAR_0_WELCOME_A[8] = {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F};
     static const byte PROGMEM CHAR_1_WELCOME_A[8] = {0x15,0x15,0x00,0x1F,0x11,0x11,0x11,0x1F};
-    static const byte PROGMEM CHAR_2_WELCOME_A[8] = {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F};
     static const byte PROGMEM CHAR_3_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x10,0x0F,0x02};
     static const byte PROGMEM CHAR_4_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x00,0x1F,0x00};
     static const byte PROGMEM CHAR_5_WELCOME_A[8] = {0x1F,0x12,0x14,0x18,0x10,0x00,0x1F,0x02};
@@ -1096,12 +1274,7 @@ void CHARLOAD(int mode) {
     static const byte PROGMEM CHAR_6_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     static const byte PROGMEM CHAR_7_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-    static const byte PROGMEM CHAR_0_WELCOME_C[8] = {0x0F,0x10,0x10,0x11,0x11,0x11,0x11,0x10};
-    static const byte PROGMEM CHAR_1_WELCOME_C[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
     static const byte PROGMEM CHAR_2_WELCOME_C[8] = {0x1E,0x01,0x01,0x01,0x01,0x01,0x01,0x01};
-    static const byte PROGMEM CHAR_3_WELCOME_C[8] = {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
-    static const byte PROGMEM CHAR_4_WELCOME_C[8] = {0x00,0x00,0x1F,0x0E,0x04,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_5_WELCOME_C[8] = {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x1E};
 
     //FIRMWARE UPDATE SCREEN
     static const byte PROGMEM CHAR_0_FWU[8] = {0x00,0x01,0x01,0x01,0x01,0x09,0x15,0x08};
@@ -1116,22 +1289,9 @@ void CHARLOAD(int mode) {
     static const byte PROGMEM CHAR_0_SERIAL_A[8] = {0x00,0x00,0x00,0x00,0x04,0x0A,0x04,0x00};
     static const byte PROGMEM CHAR_1_SERIAL_A[8] = {0x0F,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
     static const byte PROGMEM CHAR_2_SERIAL_A[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_3_SERIAL_A[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_4_SERIAL_A[8] = {0x00,0x10,0x10,0x10,0x10,0x10,0x10,0x00};
-    static const byte PROGMEM CHAR_5_SERIAL_A[8] = {0x1F,0x10,0x12,0x12,0x12,0x10,0x10,0x10};
-    static const byte PROGMEM CHAR_6_SERIAL_A[8] = {0x1F,0x01,0x05,0x05,0x05,0x01,0x01,0x01};
 
     static const byte PROGMEM CHAR_1_SERIAL_B[8] = {0x0F,0x10,0x10,0x16,0x16,0x10,0x10,0x0F};
     static const byte PROGMEM CHAR_2_SERIAL_B[8] = {0x1F,0x00,0x00,0x06,0x06,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_3_SERIAL_B[8] = {0x1F,0x00,0x00,0x06,0x06,0x00,0x00,0x1F};
-
-    //CONNECTION OK
-    static const byte PROGMEM CHAR_0_OK[8] = {0x0F,0x10,0x10,0x13,0x14,0x14,0x14,0x14};
-    static const byte PROGMEM CHAR_1_OK[8] = {0x1F,0x00,0x00,0x12,0x0A,0x0A,0x0A,0x0B};
-    static const byte PROGMEM CHAR_2_OK[8] = {0x1E,0x01,0x01,0x05,0x09,0x11,0x01,0x01};
-    static const byte PROGMEM CHAR_3_OK[8] = {0x14,0x14,0x14,0x14,0x13,0x10,0x10,0x0F};
-    static const byte PROGMEM CHAR_4_OK[8] = {0x0B,0x0A,0x0A,0x0A,0x12,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_5_OK[8] = {0x01,0x01,0x11,0x09,0x05,0x01,0x01,0x1E};
 
     //HELPER ERROR
     static const byte PROGMEM CHAR_0_FAIL_A[8] = {0x00,0x01,0x01,0x01,0x01,0x09,0x15,0x08};
@@ -1159,7 +1319,7 @@ void CHARLOAD(int mode) {
             lcd.createChar(0,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_A[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_A[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_A[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
@@ -1191,17 +1351,17 @@ void CHARLOAD(int mode) {
             lcd.createChar(7,(uint8_t *)RAMCHARS);
             break;
         case 3:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_C[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_B[i];
             lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_C[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_B[i];
             lcd.createChar(1,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_C[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_C[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_B[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_C[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_B[i];
             lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_C[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_B[i];
             lcd.createChar(5,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_B[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
@@ -1231,13 +1391,13 @@ void CHARLOAD(int mode) {
             lcd.createChar(1,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_SERIAL_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_FWU[i];
             lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_SERIAL_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FWU[i];
             lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_SERIAL_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FWU[i];
             lcd.createChar(6,(uint8_t *)RAMCHARS);
             break;
         case 6:
@@ -1245,7 +1405,7 @@ void CHARLOAD(int mode) {
             lcd.createChar(1,(uint8_t *)RAMCHARS);
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
             lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_A[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
             break;
         case 7:
@@ -1253,22 +1413,10 @@ void CHARLOAD(int mode) {
             lcd.createChar(2,(uint8_t *)RAMCHARS);
             break;
         case 8:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_SERIAL_B[i];
+            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_B[i];
             lcd.createChar(3,(uint8_t *)RAMCHARS);
             break;
         case 9:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_OK[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_OK[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_OK[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_OK[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_OK[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_OK[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
             break;
         case 10:
             for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_FAIL_A[i];
@@ -1305,3 +1453,73 @@ void NBDelay(int time) {
     while (millis() - current_millis <= time) {check_on_off();}
     }
 
+//Clear Arrays before receiving Serial Data
+void ClearArrays() {
+    CPU_TEMP[0] = '\0'; 
+    CPU_FAN[0] = '\0'; 
+    CH1_FAN[0] = '\0';
+    CH2_FAN[0] = '\0';
+    CPU_CLK[0] = '\0'; 
+    CPU_C0_CLK[0] = '\0'; 
+    CPU_C0_VID[0] = '\0'; 
+    CPU_C1_CLK[0] = '\0'; 
+    CPU_C1_VID[0] = '\0'; 
+    CPU_C2_CLK[0] = '\0'; 
+    CPU_C2_VID[0] = '\0'; 
+    CPU_C3_CLK[0] = '\0'; 
+    CPU_C3_VID[0] = '\0'; 
+    CPU_C4_CLK[0] = '\0'; 
+    CPU_C4_VID[0] = '\0'; 
+    CPU_C5_CLK[0] = '\0'; 
+    CPU_C5_VID[0] = '\0'; 
+    CPU_C6_CLK[0] = '\0'; 
+    CPU_C6_VID[0] = '\0'; 
+    CPU_C7_CLK[0] = '\0'; 
+    CPU_C7_VID[0] = '\0'; 
+    CPU_C8_CLK[0] = '\0'; 
+    CPU_C8_VID[0] = '\0'; 
+    CPU_C9_CLK[0] = '\0'; 
+    CPU_C9_VID[0] = '\0'; 
+    CPU_C10_CLK[0] = '\0'; 
+    CPU_C10_VID[0] = '\0'; 
+    CPU_C11_CLK[0] = '\0'; 
+    CPU_C11_VID[0] = '\0'; 
+    CPU_C12_CLK[0] = '\0'; 
+    CPU_C12_VID[0] = '\0'; 
+    CPU_C13_CLK[0] = '\0'; 
+    CPU_C13_VID[0] = '\0'; 
+    CPU_C14_CLK[0] = '\0'; 
+    CPU_C14_VID[0] = '\0'; 
+    CPU_C15_CLK[0] = '\0'; 
+    CPU_C15_VID[0] = '\0'; 
+    CPU_USAGE[0] = '\0'; 
+    CPU_VCORE[0] = '\0'; 
+    CPU_VSOC[0] = '\0';
+    CPU_POWER[0] = '\0';
+    SOC_POWER[0] = '\0';
+    CPU_TOTAL_POWER[0] = '\0';
+    GPU_POWER[0] = '\0';
+    GPU_TEMP[0] = '\0'; 
+    GPU_CLK[0] = '\0'; 
+    VRAM_CLK[0] = '\0'; 
+    GPU_FAN[0] = '\0'; 
+    GPU_FPS[0] = '\0'; 
+    GPU_USAGE[0] = '\0'; 
+    GPU_VCORE[0] = '\0'; 
+    RAM_USED[0] = '\0'; 
+    RAM_FREE[0] = '\0'; 
+    PAGE_FILE_USAGE[0] = '\0'; 
+    VRAM_USED[0] = '\0'; 
+    RAM_CLK[0] = '\0'; 
+    RAM_CONTROLLER_CLK[0] = '\0'; 
+    UP_SPEED[0] = '\0'; 
+    DW_SPEED[0] = '\0';
+    DAY[0] = '\0';
+    MONTH[0] = '\0';
+    YEAR[0] = '\0';
+    HOUR[0] = '\0';
+    MINUTE[0] = '\0';
+    SECOND[0] = '\0';
+    GMT[0] = '\0';
+    return;
+}
