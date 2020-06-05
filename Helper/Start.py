@@ -1,3 +1,18 @@
+"""
+PC HARDWARE MONITOR DISPLAY FOR ARDUINO
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 #Importamos las librerias
 import urllib.request, json, serial, os, time, sys, math, subprocess,atexit,datetime,time
 import serial.tools.list_ports
@@ -13,7 +28,7 @@ com_list = None
 def welcome():
     global selected_com
     global com_list
-    print("Arduino HWMONITOR Helper\n")
+    print("PC HARDWARE MONITOR DISPLAY FOR ARDUINO HELPER\n")
     print("Working Dir:" + str(os.getcwd()))
     print("COM PORT LIST:\n")
     com_list = [comport.device for comport in serial.tools.list_ports.comports()]
