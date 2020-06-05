@@ -1,9 +1,19 @@
 /*
-HARDWARE MONITOR EXTERNAL Screen
-POWERED BY ARDUINO
-"INSERT GPL"
-CREDITS
+PC HARDWARE MONITOR DISPLAY FOR ARDUINO
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 //************************************ Init *****************************************//
 
 //F() Macro Reimplementation
@@ -172,7 +182,7 @@ boolean newData = false;
 bool timeoutOK;
 
 //Version
-const char PROGMEM version[] = "3.0";
+const char PROGMEM version[] = "3.1";
 //LCD String Arrays
 const char PROGMEM str_1[] = "WAITING FOR HELPER";
 const char PROGMEM str_2[] = "CONNECTED";
@@ -428,7 +438,7 @@ void wait_serial() {
     lcd.write(byte(4));
     lcd.write(byte(5));
     NBDelay(1000);
-    lcd.clear();
+    ShowMode();
     //Reset Buttons and Delays
     OK_BUTTON = false;
     FORWARDS_BUTTON = false;
@@ -735,7 +745,7 @@ void config() {
             else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 2) {welcome_menu = false; BL_menu = true;lcd.clear(); break;}
             else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 3) {welcome_menu = false; scroll_menu = true; break;}
             else if(OK_BUTTON && CFG_USING_BUTTONS && selected_item == 4) {welcome_menu = false; selected_item = BUZZER_CFG; speaker_menu = true; break;}
-            else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {welcome_menu = false;lcd.clear();break;}
+            else if((IR_back && !CFG_USING_BUTTONS) || (TEST_BUTTON && CFG_USING_BUTTONS)) {welcome_menu = false;break;}
             else if(IR_ACTIVE && CFG_USING_BUTTONS) {CFG_USING_BUTTONS = false;lcd.clear();}
             else if(!IR_ACTIVE && !CFG_USING_BUTTONS) {CFG_USING_BUTTONS = true; selected_item = 1;lcd.clear();}
         }
@@ -918,6 +928,7 @@ void config() {
     }   
     //Save values to EEPROM
     EEPROM_UPDATE();
+    ShowMode();
     //Reset Variables
     IR_forwards = false;
     IR_backwards = false;
@@ -1141,6 +1152,26 @@ void getsensors() {
     }
     return;
 }
+void ShowMode() {
+    lcd.clear();
+    switch(MODE) {
+        case 1:
+        lcd.setCursor(6,1);
+        lcd.print(FS(str_41));
+        break;
+        case 2:
+        lcd.setCursor(5,1);
+        lcd.print(FS(str_42));
+        break;
+        case 3:
+        lcd.setCursor(4,1);
+        lcd.print(FS(str_43));
+        break;
+    }
+    NBDelay(1000);
+    lcd.clear();
+}
+
 
 //Check if Power button is pressed, ON -> OFF (RESET)
 void check_on_off() {
