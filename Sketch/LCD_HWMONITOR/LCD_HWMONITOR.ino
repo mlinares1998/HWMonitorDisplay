@@ -14,13 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-//************************************ Init *****************************************//
-
-//F() Macro Reimplementation
-//Credits: https://forum.arduino.cc/index.php?topic=310410.0
-#define FS(a)  (reinterpret_cast<const __FlashStringHelper *>(a))
-
-//Libs
+//Libraries
 #include <EEPROM.h>
 #include "src\NewLiquidCrystal\LiquidCrystal.h" //NewLiquidCrystal from Francisco Malpartida https://bitbucket.org/fmalpartida/
 #include "src\DHT11-Library\dht.h" //DHT11 Library by Rob Tillaart https://github.com/RobTillaart/ 
@@ -28,25 +22,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "src\arduino-new-tone\NewTone.h" //NewTone Library by Tim Eckel https://bitbucket.org/teckel12/
 #include "src\Bounce2\src\Bounce2.h" //Bounce2 Library by Thomas O Fredericks https://github.com/thomasfredericks
 
-//Define Pins
-const byte IR_DIODE = 2;
-const byte LCD_D7 = 3;
-const byte LCD_D6 = 4;
-const byte LCD_D5 = 5;
-const byte LCD_BL = 6;
-const byte LCD_D4 = 7;
-const byte LCD_E = 8;
-const byte LCD_RS = 9;
-const byte BUZZER = 10;
-const byte LED_DATAPIN = 11;
-const byte LED_LATCHPIN = 12;
-const byte LED_CLOCKPIN = 13;
-const byte FWU_PIN = A0;
-const byte PWR_PHYS = A1;
-const byte CFG_PHYS = A2;
-const byte FORWARDS_PHYS = A3;
-const byte OK_PHYS = A4;
-const byte TEMP_HUMIDITY = A5;
+//F() Macro Reimplementation
+//Credits: https://forum.arduino.cc/index.php?topic=310410.0
+#define FS(a)  (reinterpret_cast<const __FlashStringHelper *>(a))
+
+//Pins
+#define IR_DIODE 2
+#define LCD_D7 3
+#define LCD_D6 4
+#define LCD_D5 5
+#define LCD_BL 6
+#define LCD_D4 7
+#define LCD_E 8
+#define LCD_RS 9
+#define BUZZER 10
+#define LED_DATAPIN 11
+#define LED_LATCHPIN 12
+#define LED_CLOCKPIN 13
+#define FWU_PIN A0
+#define PWR_PHYS A1
+#define CFG_PHYS A2
+#define FORWARDS_PHYS A3
+#define OK_PHYS A4
+#define TEMP_HUMIDITY A5
 
 //LCD Screen Init
 LiquidCrystal lcd(LCD_RS,LCD_E,LCD_D4,LCD_D5,LCD_D6,LCD_D7); //4-bit Mode
@@ -395,10 +393,9 @@ void wait_serial() {
     lcd.write(byte(1));
     lcd.write(byte(2));
     lcd.write(byte(3));
-    lcd.write(byte(4));
     lcd.setCursor(7,3);
+    lcd.write(byte(4));
     lcd.write(byte(5));
-    lcd.write(byte(6));
     current_millis = millis();
     byte dots = 1;
     while(Serial.available() == 0){
@@ -453,7 +450,7 @@ void wait_serial() {
 void monitor() {
 while(true) {
     //LOAD CUSTOM SYMBOL CHARS
-    CHARLOAD(13);
+    CHARLOAD(11);
     //Clear Arrays
     memset(dataformat, 0, sizeof dataformat);
     //Clear IR button values
@@ -1212,10 +1209,9 @@ void FWU_MODE() {
     lcd.write(byte(1));
     lcd.write(byte(2));
     lcd.write(byte(3));
-    lcd.write(byte(4));
     lcd.setCursor(7,3);
+    lcd.write(byte(4));
     lcd.write(byte(5));
-    lcd.write(byte(6));
     lcd.setCursor(17,3);
     lcd.print(FS(version));
     current_millis = millis();
@@ -1349,7 +1345,7 @@ void timeout() {
     RAM_LED = 0x01;
     update_cpanel();
     current_millis = millis();
-    CHARLOAD(10);
+    CHARLOAD(9);
     lcd.setCursor(9,2);
     lcd.write(byte(0));
     lcd.write(byte(1));
@@ -1384,7 +1380,7 @@ void timeout() {
                 RAM_LED = 0x00;
                 break;
             }
-        CHARLOAD(10 + dots);
+        CHARLOAD(9 + dots);
         dots++;
         if (dots > 1) {dots = 0;}
         update_cpanel();
@@ -1457,198 +1453,131 @@ void OK_tone() {
 // Restarts program from beginning but does not reset the peripherals and registers
 void soft_Reset() {asm volatile ("  jmp 0");}
 
-//LOAD CUSTOM LOGOS FROM FLASH TO RAM
-void CHARLOAD(int mode) {
+//Custom Logos Charset Loader
+void CHARLOAD(byte index) {
 
-    //WELCOME SCREEN
-    static const byte PROGMEM CHAR_0_WELCOME_A[8] = {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F};
-    static const byte PROGMEM CHAR_1_WELCOME_A[8] = {0x15,0x15,0x00,0x1F,0x11,0x11,0x11,0x1F};
-    static const byte PROGMEM CHAR_3_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x10,0x0F,0x02};
-    static const byte PROGMEM CHAR_4_WELCOME_A[8] = {0x1F,0x11,0x11,0x11,0x1F,0x00,0x1F,0x00};
-    static const byte PROGMEM CHAR_5_WELCOME_A[8] = {0x1F,0x12,0x14,0x18,0x10,0x00,0x1F,0x02};
-    static const byte PROGMEM CHAR_6_WELCOME_A[8] = {0x06,0x03,0x01,0x00,0x00,0x00,0x00,0x00};
-    static const byte PROGMEM CHAR_7_WELCOME_A[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04};
+    //Welcome Screen
+    static const byte PROGMEM CHAR_WELCOME_A[8][8] = 
+    {
+        {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F},
+        {0x15,0x15,0x00,0x1F,0x11,0x11,0x11,0x1F},
+        {0x00,0x00,0x00,0x1F,0x11,0x11,0x11,0x1F},
+        {0x1F,0x11,0x11,0x11,0x1F,0x10,0x0F,0x02},
+        {0x1F,0x11,0x11,0x11,0x1F,0x00,0x1F,0x00},
+        {0x1F,0x12,0x14,0x18,0x10,0x00,0x1F,0x02},
+        {0x06,0x03,0x01,0x00,0x00,0x00,0x00,0x00},
+        {0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04}
+    };
+    static const byte PROGMEM CHAR_WELCOME_B[8][8] =
+    {
+        {0x0F,0x10,0x10,0x11,0x11,0x11,0x11,0x10},
+        {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+        {0x1E,0x01,0x01,0x11,0x11,0x11,0x11,0x01},
+        {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x0F},
+        {0x00,0x00,0x1F,0x0E,0x04,0x00,0x00,0x1F},
+        {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x1E},
+        {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+        {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+    };
 
-    static const byte PROGMEM CHAR_0_WELCOME_B[8] = {0x0F,0x10,0x10,0x11,0x11,0x11,0x11,0x10};
-    static const byte PROGMEM CHAR_1_WELCOME_B[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-    static const byte PROGMEM CHAR_2_WELCOME_B[8] = {0x1E,0x01,0x01,0x11,0x11,0x11,0x11,0x01};
-    static const byte PROGMEM CHAR_3_WELCOME_B[8] = {0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
-    static const byte PROGMEM CHAR_4_WELCOME_B[8] = {0x00,0x00,0x1F,0x0E,0x04,0x00,0x00,0x1F};
-    static const byte PROGMEM CHAR_5_WELCOME_B[8] = {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x1E};
-    static const byte PROGMEM CHAR_6_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-    static const byte PROGMEM CHAR_7_WELCOME_B[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    static const byte PROGMEM CHAR_WELCOME_C[8] = {0x1E,0x01,0x01,0x01,0x01,0x01,0x01,0x01};
 
-    static const byte PROGMEM CHAR_2_WELCOME_C[8] = {0x1E,0x01,0x01,0x01,0x01,0x01,0x01,0x01};
+    //Firmware Update Screen
+    static const byte PROGMEM CHAR_FWU[6][8] = 
+    {
+        {0x00,0x00,0x00,0x00,0x00,0x02,0x05,0x02},
+        {0x0F,0x10,0x17,0x14,0x16,0x14,0x10,0x0F},
+        {0x1F,0x00,0x15,0x15,0x15,0x0E,0x00,0x1F},
+        {0x1E,0x01,0x13,0x13,0x13,0x0D,0x01,0x1E},
+        {0x1F,0x10,0x12,0x12,0x12,0x10,0x10,0x10},
+        {0x1F,0x01,0x05,0x05,0x05,0x01,0x01,0x01},
+    };
 
-    //FIRMWARE UPDATE SCREEN
-    static const byte PROGMEM CHAR_0_FWU[8] = {0x00,0x01,0x01,0x01,0x01,0x09,0x15,0x08};
-    static const byte PROGMEM CHAR_1_FWU[8] = {0x1F,0x00,0x0E,0x08,0x0C,0x08,0x00,0x1F};
-    static const byte PROGMEM CHAR_2_FWU[8] = {0x1F,0x00,0x11,0x11,0x15,0x0A,0x00,0x1F};
-    static const byte PROGMEM CHAR_3_FWU[8] = {0x1F,0x00,0x11,0x11,0x11,0x0E,0x00,0x1F};
-    static const byte PROGMEM CHAR_4_FWU[8] = {0x00,0x10,0x10,0x10,0x10,0x10,0x10,0x00};
-    static const byte PROGMEM CHAR_5_FWU[8] = {0x1F,0x10,0x12,0x12,0x12,0x10,0x10,0x10};
-    static const byte PROGMEM CHAR_6_FWU[8] = {0x1F,0x01,0x05,0x05,0x05,0x01,0x01,0x01};
+    //Wait for Serial Screen
+    static const byte PROGMEM CHAR_SERIAL_A[4][8] = 
+    {
+        {0x00,0x00,0x00,0x00,0x00,0x02,0x05,0x02},
+        {0x0F,0x10,0x10,0x10,0x10,0x10,0x10,0x0F},
+        {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F},
+        {0x1E,0x01,0x01,0x01,0x01,0x01,0x01,0x1E},
+    };
 
-    //WAIT FOR SERIAL SCREEN
-    static const byte PROGMEM CHAR_0_SERIAL_A[8] = {0x00,0x00,0x00,0x00,0x04,0x0A,0x04,0x00};
-    static const byte PROGMEM CHAR_1_SERIAL_A[8] = {0x0F,0x10,0x10,0x10,0x10,0x10,0x10,0x0F};
-    static const byte PROGMEM CHAR_2_SERIAL_A[8] = {0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x1F};
+    static const byte PROGMEM CHAR_SERIAL_B[3][8] = 
+    {
+        {0x0F,0x10,0x10,0x16,0x16,0x10,0x10,0x0F},
+        {0x1F,0x00,0x00,0x0C,0x0C,0x00,0x00,0x1F},
+        {0x1E,0x01,0x01,0x19,0x19,0x01,0x01,0x1E},
+    };
 
-    static const byte PROGMEM CHAR_1_SERIAL_B[8] = {0x0F,0x10,0x10,0x16,0x16,0x10,0x10,0x0F};
-    static const byte PROGMEM CHAR_2_SERIAL_B[8] = {0x1F,0x00,0x00,0x06,0x06,0x00,0x00,0x1F};
+    //Connection Fail Screen
+     static const byte PROGMEM CHAR_FAIL_A[7][8] = 
+    {
+        {0x00,0x00,0x00,0x00,0x00,0x02,0x05,0x02},
+        {0x0F,0x10,0x17,0x14,0x16,0x14,0x10,0x0F},
+        {0x1F,0x00,0x04,0x0A,0x0E,0x0A,0x00,0x1F},
+        {0x1F,0x00,0x0E,0x04,0x04,0x0E,0x00,0x1F},
+        {0x1E,0x01,0x11,0x11,0x11,0x1D,0x01,0x1E},
+        {0x1F,0x10,0x15,0x12,0x15,0x10,0x10,0x10},
+        {0x1F,0x01,0x15,0x09,0x15,0x01,0x01,0x01},
+    };
 
-    //HELPER ERROR
-    static const byte PROGMEM CHAR_0_FAIL_A[8] = {0x00,0x01,0x01,0x01,0x01,0x09,0x15,0x08};
-    static const byte PROGMEM CHAR_1_FAIL_A[8] = {0x1F,0x04,0x0A,0x0E,0x08,0x06,0x00,0x1F};
-    static const byte PROGMEM CHAR_2_FAIL_A[8] = {0x1F,0x00,0x12,0x1B,0x12,0x12,0x00,0x1F};
-    static const byte PROGMEM CHAR_3_FAIL_A[8] = {0x1F,0x00,0x04,0x0A,0x0A,0x04,0x00,0x1F};
-    static const byte PROGMEM CHAR_4_FAIL_A[8] = {0x1E,0x01,0x09,0x0D,0x09,0x09,0x01,0x1E};
-    static const byte PROGMEM CHAR_5_FAIL_A[8] = {0x1F,0x10,0x15,0x12,0x15,0x10,0x10,0x10};
-    static const byte PROGMEM CHAR_6_FAIL_A[8] = {0x1F,0x01,0x15,0x09,0x15,0x01,0x01,0x01};
-
-    static const byte PROGMEM CHAR_5_FAIL_B[8] = {0x1F,0x10,0x10,0x10,0x10,0x10,0x10,0x10};
-    static const byte PROGMEM CHAR_6_FAIL_B[8] = {0x1F,0x01,0x01,0x01,0x01,0x01,0x01,0x01};
-
+    static const byte PROGMEM CHAR_FAIL_B[2][8] = 
+    {
+        {0x1F,0x10,0x10,0x10,0x10,0x10,0x10,0x10},
+        {0x1F,0x01,0x01,0x01,0x01,0x01,0x01,0x01},
+    };    
 
     //CFG SCREEN
-
-
+    //TODO
+    
     //DELTA SYMBOL
     static const byte PROGMEM CHAR_DELTA[8] = {0x00,0x00,0x04,0x0E,0x1F,0x00,0x00,0x00};
-    //Custom Chars BUFFER
-    byte RAMCHARS[8] = {};
-    switch(mode) {
+
+    switch(index) {
         case 1:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_A[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_A[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_A[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_A[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_A[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_A[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_A[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_A[i];
-            lcd.createChar(7,(uint8_t *)RAMCHARS);
-            break;
+        for(byte i = 0; i<8; i++) lcd.createChar(i,(char*)CHAR_WELCOME_A[i]);
+        break;
+
         case 2:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_B[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_B[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_B[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_B[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_B[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_B[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_B[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_B[i];
-            lcd.createChar(7,(uint8_t *)RAMCHARS);
-            break;
+        for(byte i = 0; i<8; i++) lcd.createChar(i,(char*)CHAR_WELCOME_B[i]);
+        break;
+
         case 3:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_WELCOME_B[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_WELCOME_B[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_WELCOME_C[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_WELCOME_B[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_WELCOME_B[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_WELCOME_B[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_WELCOME_B[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_7_WELCOME_B[i];
-            lcd.createChar(7,(uint8_t *)RAMCHARS);
-            break;
+        lcd.createChar(2,(char*)CHAR_WELCOME_C);
+        break;
+
         case 4:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_FWU[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_FWU[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_FWU[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_FWU[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_FWU[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FWU[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FWU[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            break;
+        for(byte i = 0; i<6; i++) lcd.createChar(i,(char*)CHAR_FWU[i]);
+        break;
+
         case 5:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_SERIAL_A[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_SERIAL_A[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_FWU[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FWU[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FWU[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            break;
+        for(byte i = 0; i<4; i++) lcd.createChar(i,(char*)CHAR_SERIAL_A[i]);
+        for(byte i = 4; i<7; i++) lcd.createChar(i,(char*)CHAR_FWU[i]);
+        break;
+
         case 6:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_SERIAL_B[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_A[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            break;
+        lcd.createChar(1,(char*)CHAR_SERIAL_B[0]);
+        break;
+        
         case 7:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_B[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            break;
+        lcd.createChar(2,(char*)CHAR_SERIAL_B[1]);
+        break;
+
         case 8:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_SERIAL_B[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            break;
+        lcd.createChar(3,(char*)CHAR_SERIAL_B[2]);
+        break;
+
         case 9:
-            break;
+        for(byte i = 0; i<7; i++) lcd.createChar(i,(char*)CHAR_FAIL_A[i]);
+        break;
+
         case 10:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_0_FAIL_A[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_1_FAIL_A[i];
-            lcd.createChar(1,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_2_FAIL_A[i];
-            lcd.createChar(2,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_3_FAIL_A[i];
-            lcd.createChar(3,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_4_FAIL_A[i];
-            lcd.createChar(4,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FAIL_A[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FAIL_A[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            break;
+        lcd.createChar(5,(char*)CHAR_FAIL_B[0]);
+        lcd.createChar(6,(char*)CHAR_FAIL_B[1]);
+        break;
+
         case 11:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_5_FAIL_B[i];
-            lcd.createChar(5,(uint8_t *)RAMCHARS);
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_6_FAIL_B[i];
-            lcd.createChar(6,(uint8_t *)RAMCHARS);
-            break;
-        case 12:
-            //CFG
-        case 13:
-            for(byte i = 0; i <8; i++) RAMCHARS[i] = CHAR_DELTA[i];
-            lcd.createChar(0,(uint8_t *)RAMCHARS);
+        lcd.createChar(0,(char*)CHAR_DELTA);
         }
 }
 //Checks On-Off buttons while waiting.
